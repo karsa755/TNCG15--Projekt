@@ -8,6 +8,7 @@
 class object
 {
 	public:
+		object();
 		object(glm::vec3 p);
 		~object();
 		glm::vec3 getPosition();

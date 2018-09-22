@@ -1,5 +1,8 @@
 #include "object.h"
 
+object::object() {
+
+}
 
 object::object(glm::vec3 p) {
 	position = p;
