@@ -7,7 +7,7 @@ public:
 	polyModel(std::vector<triangle> t, glm::vec3 p);
 	~polyModel();
 
-	glm::vec3 rayIntersect(ray& r);
+	std::pair<glm::vec3, triangle*> rayIntersect(ray& r);
 
 private:
 	std::vector<triangle> polyList;

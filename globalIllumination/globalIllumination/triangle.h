@@ -1,12 +1,17 @@
 #pragma once
+
+#include <utility>
+
 #include "definition.h"
 #include "ray.h"
 class triangle
 {
 	public:
+		triangle();
 		triangle(vertex& v0, vertex& v1, vertex& v2, color c);
 		~triangle();
-		glm::vec3 rayIntersection(ray r);
+		std::pair<glm::vec3, triangle*> rayIntersection(ray &r);
+		color getSurfaceColor();
 
 	private:
 		

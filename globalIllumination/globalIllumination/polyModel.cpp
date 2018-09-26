@@ -7,15 +7,19 @@ polyModel::polyModel(std::vector<triangle> t, glm::vec3 p) : object(p)
 	polyList = t;
 }
 
-glm::vec3 polyModel::rayIntersect(ray& r) {
+std::pair<glm::vec3, triangle*> polyModel::rayIntersect(ray& r) {
+	bool fuck = false;
+	std::pair<glm::vec3, triangle*> tr(glm::vec3(std::numeric_limits<float>::max()), nullptr);
 	for (auto it = begin(polyList); it != end(polyList); ++it) {
-		if (it->rayIntersection(r) != glm::vec3(-1.0, -1.0, -1.0))
-		{
-			return it->rayIntersection(r);
+		std::pair<glm::vec3, triangle*> temp;
+		temp = it->rayIntersection(r);
+		if (temp.first != glm::vec3(-1.0) && temp.first.x < tr.first.x) {
+			tr = temp;
+			fuck = true;
 		}
 	}
-	//nothing was found.
-	return glm::vec3(-1.0, -1.0, -1.0);
+
+	return (fuck) ? tr : std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), nullptr);
 }
 
 

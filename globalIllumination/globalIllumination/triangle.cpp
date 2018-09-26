@@ -1,5 +1,9 @@
 #include "triangle.h"
 
+triangle::triangle() {
+
+}
+
 triangle::triangle(vertex& _v0, vertex& _v1, vertex& _v2, color _c) : 
 	v0(_v0), v1(_v1), v2(_v2), surfaceColor(_c)
 {
@@ -7,11 +11,12 @@ triangle::triangle(vertex& _v0, vertex& _v1, vertex& _v2, color _c) :
 }
 
 
+
 triangle::~triangle()
 {
 }
 
-glm::vec3 triangle::rayIntersection(ray r)
+std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 {
 	//can be nice to test how it makes a vec4 to a vec3..
 	vertex start = r.getStartVec();
@@ -26,20 +31,26 @@ glm::vec3 triangle::rayIntersection(ray r)
 	float constant = 1.0 / (glm::dot(P, E1));
 	glm::vec3 result = constant * glm::vec3(glm::dot(Q, E2), glm::dot(P, T), glm::dot(Q, D));
 
-	if (result.y < 0 || result.z < 0 || (result.y + result.z) > 1)
+	if (result.y < 0.0 || result.z < 0.0 || (result.y + result.z) > 1.0)
 	{
 		//return "nollvektor" if there is no intersection
-		return glm::vec3(-1.0, -1.0, -1.0);
+		//return glm::vec3(-1.0, -1.0, -1.0);
+		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), this);
 	}
-	if (result.x > 0)
+	if (result.x > 0.0)
 	{
 		glm::vec3 rayStart = glm::vec3(start.x, start.y, start.z);
 		//there is an intersection
-		return rayStart + D * result.x;
+		//return rayStart + D * result.x;
+		return std::pair<glm::vec3, triangle*>(rayStart + D * result.x, this);
 	}
 	else
 	{
-		return glm::vec3(-1.0, -1.0, -1.0);
+		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), this);
 	}
 	
+}
+
+color triangle::getSurfaceColor() {
+	return surfaceColor;
 }

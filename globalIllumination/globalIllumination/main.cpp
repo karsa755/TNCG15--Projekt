@@ -56,8 +56,15 @@ polyModel createScene()
 
 int main(int, char*[])
 {
+	std::vector<object*> objectList;
+
 	polyModel scene = createScene();
 
-	std::cout << "hello world" << std::endl;
+	objectList.push_back(&scene);
+
+	camera *cam = new camera(objectList);
+
+	cam->render();
+
 	return 0;
 }
