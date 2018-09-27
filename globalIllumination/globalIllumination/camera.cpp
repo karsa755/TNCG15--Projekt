@@ -20,6 +20,9 @@ void camera::render() {
 	const float deltaPH = pixelHeight / 2.0;
 
 	for (int i = 0; i < width; i++) {
+
+		std::cout << (i / (float) (width-1.0)) * 100.0 << "% Done..." << std::endl;
+
 		for (int j = 0; j < height; ++j) {
 			float y = (1.0 - i * pixelWidth) - deltaPW;
 			float z = (j * pixelHeight - 1.0) + deltaPH;
