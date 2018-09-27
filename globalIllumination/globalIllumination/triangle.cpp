@@ -1,5 +1,7 @@
 #include "triangle.h"
 
+#define eps std::numeric_limits<float>::epsilon()
+
 triangle::triangle() {
 
 }
@@ -31,7 +33,7 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 	float constant = 1.0 / (glm::dot(P, E1));
 	glm::vec3 result = constant * glm::vec3(glm::dot(Q, E2), glm::dot(P, T), glm::dot(Q, D));
 
-	if (result.y < 0.0 || result.z < 0.0 || (result.y + result.z) > 1.0)
+	if (result.y < (0.0-eps) || result.z < (0.0-eps) || (result.y + result.z) > (1.0+eps))
 	{
 		//return "nollvektor" if there is no intersection
 		//return glm::vec3(-1.0, -1.0, -1.0);

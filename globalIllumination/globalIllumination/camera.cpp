@@ -4,7 +4,7 @@
 
 camera::camera(std::vector<object*> ol)
 {
-	currentEye = &eye2;
+	currentEye = &eye1;
 	objects = ol;
 }
 
@@ -18,6 +18,8 @@ void camera::render() {
 	const float pixelHeight = 2.0 / height;
 	const float deltaPW = pixelWidth / 2.0;
 	const float deltaPH = pixelHeight / 2.0;
+
+	int debugCounter = 0;
 
 	for (int i = 0; i < width; i++) {
 
@@ -46,23 +48,34 @@ void camera::render() {
 
 			//we have all intersections, find the closest
 			auto it = begin(intersections);
-			tr = *it;
-			++it;
-			for (; it != end(intersections); ++it) {
-				if (it->first.x < tr.first.x) {
-					tr = *it;
+			if (it != end(intersections)) {
+				tr = *it;
+				++it;
+				for (; it != end(intersections); ++it) {
+					if (it->first.x < tr.first.x) {
+						tr = *it;
+					}
 				}
+
+				//shoud do stuff with ray...
+
+
+				//set image color
+				color c = tr.second->getSurfaceColor();
+				image[i][j].setIntensity(c);
 			}
-
-			//shoud do stuff with ray...
-
-
-			//set image color
-			color c = tr.second->getSurfaceColor();
-			image[i][j].setIntensity(c);
+			else {
+				std::cout << "Error, No collision...." << std::endl;
+				color c = color(0.0, 0.0, 0.0);
+				image[i][j].setIntensity(c);
+				++debugCounter;
+			}
+			
 
 		}
 	}
+
+	std::cout << "Number of failed pixels: " << debugCounter << std::endl;
 
 
 	//Write
