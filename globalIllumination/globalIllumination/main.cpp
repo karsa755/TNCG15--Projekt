@@ -54,16 +54,35 @@ polyModel createScene()
 	polyModel scene(sceneList, glm::vec3(0.0, 0.0, 0.0));
 	return scene;
 }
+polyModel createTetra()
+{
+	vertex tetraVerts[4];
+	std::vector<triangle> sceneList;
+	tetraVerts[0] = vertex(0.0f, -0.3f, 0.0f, 1.0f);
+	tetraVerts[1] = vertex(1.0f, -0.75f, 0.0f, 1.0f);
+	tetraVerts[2] = vertex(0.0f, -1.0f, 0.0f, 1.0f);
+	tetraVerts[3] = vertex(1.0f, -0.75f, 1.0f, 1.0f);
+
+	sceneList.push_back(triangle(tetraVerts[0], tetraVerts[2], tetraVerts[1], color(1.0, 0.0, 0.0)));
+	sceneList.push_back(triangle(tetraVerts[3], tetraVerts[1], tetraVerts[2], color(1.0, 0.0, 0.0)));
+	sceneList.push_back(triangle(tetraVerts[3], tetraVerts[0], tetraVerts[1], color(1.0, 0.0, 0.0)));
+	sceneList.push_back(triangle(tetraVerts[3], tetraVerts[0], tetraVerts[2], color(1.0, 0.0, 0.0)));
+	
+	polyModel tetra(sceneList, glm::vec3(0.0f));
+	return tetra;
+}
 
 int main(int, char*[])
 {
 	std::vector<object*> objectList;
 
 	polyModel scene = createScene();
-	implicitModel sphere(0.5f, glm::vec3(0.0f));
+	polyModel tetra = createTetra();
+	implicitModel sphere(0.4f, glm::vec3(1.0f, 0.3f, 0.0f));
 
 	objectList.push_back(&scene);
 	objectList.push_back(&sphere);
+	objectList.push_back(&tetra);
 
 	camera *cam = new camera(objectList);
 

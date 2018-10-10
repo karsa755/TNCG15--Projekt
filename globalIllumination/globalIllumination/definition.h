@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp> // glm::vec3
 #include <glm/vec4.hpp> // glm::vec4
+#include <glm/gtc/matrix_transform.hpp>
 
 using vertex = glm::vec4;
 using direction = glm::vec3;

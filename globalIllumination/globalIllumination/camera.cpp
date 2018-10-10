@@ -4,7 +4,7 @@
 
 camera::camera(std::vector<object*> ol)
 {
-	currentEye = &eye1;
+	currentEye = &eye2;
 	objects = ol;
 }
 
