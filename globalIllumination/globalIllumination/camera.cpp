@@ -44,6 +44,13 @@ void camera::render() {
 				if (tr.second != nullptr) {
 					intersections.push_back(tr);
 				}
+				else
+				{
+					if ((*it)->isImplicit() && tr.first != glm::vec3(-1.0f))
+					{
+						intersections.push_back(tr);
+					}
+				}
 			}
 
 			//we have all intersections, find the closest
@@ -61,8 +68,16 @@ void camera::render() {
 
 
 				//set image color
-				color c = tr.second->getSurfaceColor();
-				image[i][j].setIntensity(c);
+				if (tr.second != nullptr)
+				{
+					color c = tr.second->getSurfaceColor();
+					image[i][j].setIntensity(c);
+				}
+				else
+				{
+					color c = color(0.0, 0.0, 1.0);
+					image[i][j].setIntensity(c);
+				}
 			}
 			else {
 				std::cout << "Error, No collision...." << std::endl;

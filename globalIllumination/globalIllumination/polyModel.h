@@ -8,6 +8,7 @@ public:
 	~polyModel();
 
 	std::pair<glm::vec3, triangle*> rayIntersect(ray& r);
+	bool isImplicit();
 
 private:
 	std::vector<triangle> polyList;

@@ -2,6 +2,7 @@
 #include "definition.h"
 #include "camera.h"
 #include "polyModel.h"
+#include "implicitModel.h"
 
 polyModel createScene()
 {
@@ -59,8 +60,10 @@ int main(int, char*[])
 	std::vector<object*> objectList;
 
 	polyModel scene = createScene();
+	implicitModel sphere(0.5f, glm::vec3(0.0f));
 
 	objectList.push_back(&scene);
+	objectList.push_back(&sphere);
 
 	camera *cam = new camera(objectList);
 
