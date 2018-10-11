@@ -8,13 +8,14 @@ class triangle
 {
 	public:
 		triangle();
-		triangle(vertex& v0, vertex& v1, vertex& v2, color c);
+		triangle(vertex& v0, vertex& v1, vertex& v2, color c, bool emitter = false);
 		~triangle();
 		std::pair<glm::vec3, triangle*> rayIntersection(ray &r);
 		color getSurfaceColor();
+		bool isEmitting();
 
 	private:
-		
+		bool isEmitter;
 		vertex v0, v1, v2;
 		color surfaceColor;
 		direction normal;

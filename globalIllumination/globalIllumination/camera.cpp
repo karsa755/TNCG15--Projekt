@@ -37,18 +37,24 @@ void camera::render() {
 			ray r = ray(s,e);
 
 			//Check intersections
-			std::vector<std::pair<glm::vec3, triangle*>> intersections;
+			//std::vector<std::pair<glm::vec3, triangle*>> intersections;
+			std::vector<std::pair<glm::vec3, std::pair<object* , triangle* >>> intersections;
 			std::pair<glm::vec3, triangle*> tr;
+			std::pair<glm::vec3, std::pair<object*, triangle* >> finalBoss;
 			for (auto it = begin(objects); it != end(objects); ++it) {
 				tr = (*it)->rayIntersect(r);
+				finalBoss.first = tr.first;
+				finalBoss.second.second = tr.second;
+				finalBoss.second.first = *it;
 				if (tr.second != nullptr) {
-					intersections.push_back(tr);
+					intersections.push_back(finalBoss);
 				}
 				else
 				{
-					if ((*it)->isImplicit() && tr.first != glm::vec3(-1.0f))
+					if ((*it)->isImplicit() && finalBoss.first != glm::vec3(-1.0f))
 					{
-						intersections.push_back(tr);
+						intersections.push_back(finalBoss);
+
 					}
 				}
 			}
@@ -56,11 +62,11 @@ void camera::render() {
 			//we have all intersections, find the closest
 			auto it = begin(intersections);
 			if (it != end(intersections)) {
-				tr = *it;
+				finalBoss = *it;
 				++it;
 				for (; it != end(intersections); ++it) {
-					if (it->first.x < tr.first.x) {
-						tr = *it;
+					if (it->first.x < finalBoss.first.x) {
+						finalBoss = *it;
 					}
 				}
 
@@ -68,14 +74,15 @@ void camera::render() {
 
 
 				//set image color
-				if (tr.second != nullptr)
+				if (finalBoss.second.second != nullptr)
 				{
-					color c = tr.second->getSurfaceColor();
+					color c = finalBoss.second.second->getSurfaceColor();
 					image[i][j].setIntensity(c);
 				}
 				else
 				{
-					color c = color(0.0, 0.0, 1.0);
+					glm::vec3 normal = (tr.first - finalBoss.second.first->getPosition()) / finalBoss.second.first->getRadius();
+					color c = finalBoss.second.first->getColor();
 					image[i][j].setIntensity(c);
 				}
 			}

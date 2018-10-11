@@ -2,7 +2,7 @@
 
 
 
-polyModel::polyModel(std::vector<triangle> t, glm::vec3 p) : object(p)
+polyModel::polyModel(std::vector<triangle> t, glm::vec3 p, int prop) : object(p, prop)
 {
 	polyList = t;
 }

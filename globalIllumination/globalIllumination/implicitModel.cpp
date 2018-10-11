@@ -2,11 +2,10 @@
 
 
 
-implicitModel::implicitModel(float radius, glm::vec3 center)
-{
-	_radius = radius;
-	_center = center;
+implicitModel::implicitModel(float radius, glm::vec3 center, int prop, color c): object(center, prop), _color(c), _radius(radius)
+{	
 }
+
 
 implicitModel::~implicitModel()
 {
@@ -22,8 +21,8 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 	glm::vec3 endVec = r.getEndVec();
 	glm::vec3 dir = endVec - startVec;
 	a = glm::dot(dir, dir);
-	b = glm::dot(dir,2.0f * (startVec - _center));
-	c = glm::dot(_center, _center) + glm::dot(startVec, startVec) - 2.0f * glm::dot(startVec, _center) - _radius * _radius;
+	b = glm::dot(dir,2.0f * (startVec - getPosition()));
+	c = glm::dot(getPosition(), getPosition()) + glm::dot(startVec, startVec) - 2.0f * glm::dot(startVec, getPosition()) - _radius * _radius;
 	d = b * b + (-4.0f)*a*c;
 	if (d < 0)
 	{
@@ -34,7 +33,7 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 	{
 		distance = sqrtf(a)*t;
 		hitpoint = startVec + t * dir;
-		normal = (hitpoint - _center) / _radius;
+		//normal = (hitpoint - getPosition()) / _radius;
 		tr.first = hitpoint;
 		return tr;
 	}
@@ -43,4 +42,14 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 bool implicitModel::isImplicit()
 {
 	return true;
+}
+
+float implicitModel::getRadius()
+{
+	return _radius;
+}
+
+color implicitModel::getColor()
+{
+	return _color;
 }
