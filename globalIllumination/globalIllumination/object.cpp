@@ -23,5 +23,10 @@ color object::getColor()
 	return color();
 }
 
+std::vector<triangle> object::getPolyList()
+{
+	return std::vector<triangle>();
+}
+
 object::~object() {
 }

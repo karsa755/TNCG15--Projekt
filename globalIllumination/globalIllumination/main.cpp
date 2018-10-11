@@ -85,7 +85,6 @@ int main(int, char*[])
 	objectList.push_back(&tetra);
 
 	camera *cam = new camera(objectList);
-
 	cam->render();
 
 	return 0;

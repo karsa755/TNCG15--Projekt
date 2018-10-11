@@ -22,6 +22,11 @@ std::pair<glm::vec3, triangle*> polyModel::rayIntersect(ray& r) {
 	return (fuck) ? tr : std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), nullptr);
 }
 
+std::vector<triangle> polyModel::getPolyList()
+{
+	return polyList;
+}
+
 bool polyModel::isImplicit()
 {
 	return false;

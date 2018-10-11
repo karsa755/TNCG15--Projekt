@@ -17,6 +17,7 @@ class object
 		virtual bool isImplicit() = 0;
 		virtual float getRadius();
 		virtual color getColor();
+		virtual std::vector<triangle> getPolyList();
 
 	private:
 		glm::vec3 position;

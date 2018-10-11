@@ -3,6 +3,7 @@
 #include "definition.h"
 #include "pixel.h"
 #include "object.h"
+#include "polyModel.h"
 
 class camera
 {
@@ -11,9 +12,11 @@ public:
 	~camera();
 
 	void switchEye(glm::vec3 & e);
+	triangle* getLightSource();
 	void render();
 
 private:
+	void findLightSource();
 	const static int width = 100;
 	const static int height = 100;
 	const glm::vec3 * currentEye;
@@ -23,5 +26,6 @@ private:
 	const glm::vec3 plane[4] = { glm::vec3(0.0,-1.0,-1.0), glm::vec3(0.0,1.0,-1.0), glm::vec3(0.0,1.0,1.0), glm::vec3(0.0,-1.0,1.0) };
 	pixel image[width][height] = { pixel() };
 	std::vector<object*> objects;
+	triangle *lightSource;
 };
 
