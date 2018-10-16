@@ -13,6 +13,7 @@ class triangle
 		std::pair<glm::vec3, triangle*> rayIntersection(ray &r);
 		color getSurfaceColor();
 		bool isEmitting();
+		glm::vec3 getNormal();
 
 	private:
 		bool isEmitter;

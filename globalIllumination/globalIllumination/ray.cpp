@@ -2,8 +2,8 @@
 
 
 
-ray::ray(vertex& s, vertex& e) : 
-	start(s), end(e)
+ray::ray(vertex& s, vertex& e) :
+	start(s), end(e), importance(0.0)
 {
 }
 
@@ -14,6 +14,16 @@ void ray::setTriangle(triangle *t) {
 void ray::setColor(color &c) {
 	//Should combine ray color with triangle colors
 	rayColor = c;
+}
+
+double ray::getImportance()
+{
+	return importance;
+}
+
+void ray::setImportance(double imp)
+{
+	importance = imp;
 }
 
 

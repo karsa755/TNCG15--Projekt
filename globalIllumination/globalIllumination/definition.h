@@ -9,6 +9,8 @@
 #define ORENNAYAR 2
 #define REFRACT 3
 #define MIRROR 4
+#define PI 3.14159265359
+#define LIGHTWATT 1000.0
 
 
 

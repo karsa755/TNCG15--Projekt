@@ -37,7 +37,7 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 	{
 		//return "nollvektor" if there is no intersection
 		//return glm::vec3(-1.0, -1.0, -1.0);
-		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), this);
+		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), nullptr);
 	}
 	if (result.x > 0.0)
 	{
@@ -48,7 +48,7 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 	}
 	else
 	{
-		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), this);
+		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), nullptr);
 	}
 	
 }
@@ -60,4 +60,9 @@ color triangle::getSurfaceColor() {
 bool triangle::isEmitting()
 {
 	return isEmitter;
+}
+
+glm::vec3 triangle::getNormal()
+{
+	return normal;
 }

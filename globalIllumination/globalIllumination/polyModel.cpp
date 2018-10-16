@@ -9,11 +9,14 @@ polyModel::polyModel(std::vector<triangle> t, glm::vec3 p, int prop) : object(p,
 
 std::pair<glm::vec3, triangle*> polyModel::rayIntersect(ray& r) {
 	bool fuck = false;
+	float smallestDist = std::numeric_limits<float>::max();
 	std::pair<glm::vec3, triangle*> tr(glm::vec3(std::numeric_limits<float>::max()), nullptr);
 	for (auto it = begin(polyList); it != end(polyList); ++it) {
 		std::pair<glm::vec3, triangle*> temp;
 		temp = it->rayIntersection(r);
-		if (temp.first != glm::vec3(-1.0) && temp.first.x < tr.first.x) {
+		float dist = glm::distance(temp.first, (glm::vec3) r.getStartVec());
+		if (temp.first != glm::vec3(-1.0) && dist < smallestDist) {
+			smallestDist = dist;
 			tr = temp;
 			fuck = true;
 		}
