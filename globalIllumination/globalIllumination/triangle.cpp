@@ -1,7 +1,5 @@
 #include "triangle.h"
 
-#define eps std::numeric_limits<float>::epsilon()
-
 triangle::triangle() {
 
 }

@@ -11,7 +11,7 @@
 #define MIRROR 4
 #define PI 3.14159265359
 #define LIGHTWATT 1000.0
-
+#define eps std::numeric_limits<float>::epsilon()
 
 
 using vertex = glm::vec4;
