@@ -64,5 +64,12 @@ bool triangle::isEmitting()
 
 glm::vec3 triangle::getNormal()
 {
+
 	return normal;
+}
+
+float triangle::getArea()
+{
+	float dafq = 0.5f * glm::length(glm::cross(glm::vec3(v1 / v1.w - v0 / v0.w), glm::vec3(v2 / v2.w - v1 / v1.w)));
+	return dafq;
 }

@@ -28,6 +28,8 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 	{
 		return tr;
 	}
+	d = std::sqrt(d);
+	std::cout << "";
 	float t = (-0.5f)*(b + d) / a;
 	if (t > 0.0f)
 	{

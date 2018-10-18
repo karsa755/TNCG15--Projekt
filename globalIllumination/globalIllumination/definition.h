@@ -10,7 +10,7 @@
 #define REFRACT 3
 #define MIRROR 4
 #define PI 3.14159265359
-#define LIGHTWATT 1000.0
+#define LIGHTWATT 300.0
 
 
 

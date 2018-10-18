@@ -15,10 +15,12 @@ class triangle
 		bool isEmitting();
 		glm::vec3 getNormal();
 		bool isEmitter;
+		float getArea();
 	private:
 		
 		vertex v0, v1, v2;
 		color surfaceColor;
 		direction normal;
+		float area;
 };
 
