@@ -23,13 +23,13 @@ polyModel createScene()
 	floorVertices[4] = vertex(13.0f, 0.0f, -5.0f, 1.0f);
 	floorVertices[5] = vertex(10.0f, -6.0f, -5.0f, 1.0f);
 	//roof triangles
-	sceneList.push_back(triangle(roofVertices[0], roofVertices[1], roofVertices[2], color(1.0, 1.0, 1.0), true));
+	sceneList.push_back(triangle(roofVertices[0], roofVertices[1], roofVertices[2], color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[2], roofVertices[5], color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[5], roofVertices[3], color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[3], roofVertices[5], roofVertices[4], color(1.0, 1.0, 1.0)));
 	//floor triangles
 	sceneList.push_back(triangle(floorVertices[0], floorVertices[1], floorVertices[2], color(1.0, 1.0, 1.0)));
-	sceneList.push_back(triangle(floorVertices[0], floorVertices[2], floorVertices[5], color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(floorVertices[0], floorVertices[2], floorVertices[5], color(0.8, 0.8, 0.8),true));
 	sceneList.push_back(triangle(floorVertices[0], floorVertices[5], floorVertices[3], color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(floorVertices[3], floorVertices[5], floorVertices[4], color(1.0, 1.0, 1.0)));
 	//wall 1, red

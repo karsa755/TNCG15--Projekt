@@ -14,9 +14,9 @@ class triangle
 		color getSurfaceColor();
 		bool isEmitting();
 		glm::vec3 getNormal();
-
-	private:
 		bool isEmitter;
+	private:
+		
 		vertex v0, v1, v2;
 		color surfaceColor;
 		direction normal;
