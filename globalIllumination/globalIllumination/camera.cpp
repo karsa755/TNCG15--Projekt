@@ -46,7 +46,6 @@ void camera::getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::ve
 	glm::vec3 Im = I - (glm::dot(I,Z) * Z);
 	X = glm::normalize(Im);
 	Y = glm::cross(-X,Z);
-
 }
 
 glm::vec3 camera::localToWorld(const glm::vec3 & X, const glm::vec3 & Y, const glm::vec3 & Z, const glm::vec3 & v)
@@ -66,12 +65,9 @@ glm::vec3 camera::worldToLocal(const glm::vec3 & X, const glm::vec3 & Y, const g
 glm::vec3 sampleHemisphere(const float &cosTheta, const float &sidPhi) {
 	float sinTheta = sqrtf(1.0 - cosTheta * cosTheta);
 	float phi = 2.0 * PI * sidPhi;
-	//float x = sinTheta * sinf(phi);
-	//float y = -(sinTheta * cosf(phi));
-	//return glm::vec3(x,y,cosTheta);
-	float z = sinTheta * sinf(phi);
-	float x = (sinTheta * cosf(phi));
-	return glm::vec3(x, cosTheta, z);
+	float x = sinTheta * sinf(phi);
+	float y = -(sinTheta * cosf(phi));
+	return glm::vec3(x,y,cosTheta);
 }
 
 
@@ -126,28 +122,27 @@ color camera::castRay(ray &r, int depth) {
 
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
-
 	if (intersection.second.first == nullptr) {
 		std::cout << "ERROR" << std::endl;
 		return color(0.0,0.0,0.0);
 	}
 
-	
-	if (intersection.second.second != nullptr && !intersection.second.first->isImplicit() && intersection.second.second->isEmitter) {
+	/*
+	if (intersection.second.second != nullptr && intersection.second.first->isImplicit() && intersection.second.second->isEmitting()) {
 		//hitting light source
 		std::cout << "TO LIGHTSOURCE" << std::endl;
-		color ret = intersection.second.second->getSurfaceColor();
-		return ret;
+		return LIGHTWATT * intersection.second.second->getSurfaceColor();
 	}
-	
+	*/
 	if (depth > 3) {
 		//shadow rays n' stuff
-		return color(1.0,1.0,1.0);
+		return LIGHTWATT * color(1.0,1.0,1.0);
 
 	}
 	else {
 		//recursive call
 		int N = 3;
+		
 		glm::vec3 X;
 		glm::vec3 Y;
 		glm::vec3 I = intersection.first - (glm::vec3)r.getStartVec();
@@ -171,11 +166,13 @@ color camera::castRay(ray &r, int depth) {
 			outRay.setImportance(r.getImportance() * cosTheta);
 
 			++depth;
-			finalColor += (double)cosTheta * castRay(outRay, depth) / PDF;
+			finalColor += (double)cosTheta * castRay(outRay, depth) / PDF + (LIGHTWATT * color(1.0, 1.0, 1.0));
 		}
 
 		finalColor /= (double) N;
+
 		color c;
+
 		if (intersection.second.first->isImplicit()) {
 			c = intersection.second.first->getColor();
 		}
@@ -186,6 +183,9 @@ color camera::castRay(ray &r, int depth) {
 		return finalColor * c;
 
 	}
+
+
+	
 }
 
 
@@ -247,9 +247,9 @@ void camera::render() {
 	fprintf(f, "P6\n%i %i 255\n", width, height);
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
-			fputc(image[x][y].getIntensity().x * 255.0, f);   // 0 .. 255
-			fputc(image[x][y].getIntensity().y * 255.0, f); // 0 .. 255
-			fputc(image[x][y].getIntensity().z * 255.0, f);  // 0 .. 255
+			fputc(image[x][y].getIntensity().x * 255.0 / LIGHTWATT, f);   // 0 .. 255
+			fputc(image[x][y].getIntensity().y * 255.0 / LIGHTWATT, f); // 0 .. 255
+			fputc(image[x][y].getIntensity().z * 255.0 / LIGHTWATT, f);  // 0 .. 255
 		}
 	}
 	fclose(f);
