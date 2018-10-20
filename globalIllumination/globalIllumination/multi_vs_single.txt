@@ -1,0 +1,24 @@
+100x100, Branch Factor = 4, Shadow Rays = 8, Depth = 2
+
+Single: 2m50s
+Multi:  0m48s
+
+Single/Multi: 3.54 	(higher is better)
+
+======================================================
+400x400, Branch Factor = 4, Shadow Rays = 8, Depth = 2
+
+Single: 43m45s (expected)
+Multi:  12m30s
+
+Single/Multi: 3.50 	(higher is better) 
+
+======================================================
+400x400, Branch Factor = 8, Shadow Rays = 8, Depth = 2
+
+Single: 03h14m25s (expected)
+Multi:  00h55m33s
+
+Single/Multi: 3.50 	(higher is better) 
+
+======================================================

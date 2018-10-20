@@ -61,6 +61,110 @@ glm::vec3 camera::worldToLocal(const glm::vec3 & X, const glm::vec3 & Y, const g
 	return m*v;
 }
 
+void camera::setBranchFactor(int f)
+{
+	FACTOR = f;
+}
+
+void camera::setShadowRays(int n)
+{
+	SHADOWRAYS = n;
+}
+
+void camera::setDepth(int d)
+{
+	MAXDEPTH = d;
+}
+
+int camera::getWidht()
+{
+	return width;
+}
+
+int camera::getHeight()
+{
+	return height;
+}
+
+const glm::vec3 * camera::getCurrentEye()
+{
+	return currentEye;
+}
+
+void camera::setPixelValue(color c, int i, int j)
+{
+	image[i][j].setIntensity(c);
+}
+
+double camera::getBrightest(int i)
+{
+	return brightest[i];
+}
+
+void camera::setBrightest(int v, int i)
+{
+	brightest[i] = v;
+}
+
+void camera::setRenderingMode(int mode)
+{
+	MODE = mode;
+}
+
+void camera::clearConsole()
+{
+	COORD topLeft = { 0, 0 };
+	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO screen;
+	DWORD written;
+
+	GetConsoleScreenBufferInfo(console, &screen);
+	FillConsoleOutputCharacterA(
+		console, ' ', screen.dwSize.X * screen.dwSize.Y, topLeft, &written
+	);
+	FillConsoleOutputAttribute(
+		console, FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE,
+		screen.dwSize.X * screen.dwSize.Y, topLeft, &written
+	);
+	SetConsoleCursorPosition(console, topLeft);
+
+}
+
+void camera::setPrintReady(int row, int i)
+{
+	timeToPrint[i].first = true;
+	timeToPrint[i].second = row;
+}
+
+bool camera::isReadyToPrint()
+{
+	return (timeToPrint[0].first && timeToPrint[1].first && timeToPrint[2].first && timeToPrint[3].first);
+}
+
+void camera::getPrintRows(int toReturn[4])
+{
+	toReturn[0] = timeToPrint[0].second;
+	toReturn[1] = timeToPrint[1].second;
+	toReturn[2] = timeToPrint[2].second;
+	toReturn[3] = timeToPrint[3].second;
+}
+
+void camera::clearReadyToPrint()
+{
+	timeToPrint[0].first = false;
+	timeToPrint[1].first = false;
+	timeToPrint[2].first = false;
+	timeToPrint[3].first = false;
+}
+
+void camera::printContext()
+{
+	std::cout << "Rendering " << width << "x" << height << std::endl;
+	std::cout << "Branching Factor: " << FACTOR << std::endl;
+	std::cout << "Number Shadow Rays: " << SHADOWRAYS << std::endl;
+	std::cout << "Max Depth: " << MAXDEPTH << std::endl << std::endl;
+}
+
 
 glm::vec3 sampleHemisphere(const float &cosTheta, const float &sidPhi) {
 	float sinTheta = sqrtf(1.0 - cosTheta * cosTheta);
@@ -127,20 +231,19 @@ color camera::castRay(ray &r, int depth) {
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
 	vertex midPoint = lightSource.getMidPoint();
-	const int SAMPLELIGHTS = 1;
-	glm::vec3 lightSamples[SAMPLELIGHTS];
+	std::vector<glm::vec3> lightSamples;
 
-	for (int i = 0; i < SAMPLELIGHTS; ++i)
+	for (int i = 0; i < SHADOWRAYS; ++i)
 	{
 		if (i == 0)
 		{
-			lightSamples[i] = midPoint;
+			lightSamples.emplace_back(midPoint);
 		}
 		else
 		{
 			float u = distribution(generator);
 			float v = (1 - u) * distribution(generator);
-			lightSamples[i] = lightSource.sampleTriangle(u, v);
+			lightSamples.emplace_back(lightSource.sampleTriangle(u, v));
 		}
 
 	}
@@ -154,10 +257,10 @@ color camera::castRay(ray &r, int depth) {
 		//hitting light source
 		//std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
-		return ret;
+		return (double)LIGHTWATT * ret;
 	}
 	
-	if (depth > 1) {
+	if (depth >= MAXDEPTH) {
 		//shadow rays n' stuff
 		color dirLight = { 1.0, 1.0, 1.0 };
 
@@ -167,24 +270,24 @@ color camera::castRay(ray &r, int depth) {
 		
 		vertex startPoint = { intersection.first + (normal * 0.001f),1.0f };
 		double lightHits = 0.0;
-		for (int i = 0; i < SAMPLELIGHTS; ++i)
+		for (int i = 0; i < SHADOWRAYS; ++i)
 		{
-			vertex n = vertex(lightSamples[i], 1.0f);
+			vertex n = vertex(lightSamples.at(i), 1.0f);
 			ray toLight(startPoint, n);
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
 				//std::cout << "(x,y,z) = (" << n.x << "," << n.y << ", " << n.z << ")" << std::endl;
-				lightHits += 1.0f;
-				
+				//lightHits += 1.0f;
+				lightHits += (1.0f * std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))));
 			}
 		}
 
-		return (LIGHTWATT *color(lightHits, lightHits, lightHits))  / (PI*AREA * (double)SAMPLELIGHTS);
+		return ((double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / (PI*AREA * (double)SHADOWRAYS);
 	}
 	else {
 		//recursive call
-		int N = 2;
+		int N = FACTOR;
 		glm::vec3 X;
 		glm::vec3 Y;
 		glm::vec3 I = intersection.first - (glm::vec3)r.getStartVec();
@@ -198,14 +301,15 @@ color camera::castRay(ray &r, int depth) {
 		vertex startPoint = { intersection.first + (Z * 0.001f),1.0f };
 
 		double lightHits = 0.0;
-		for (int i = 0; i < SAMPLELIGHTS; ++i)
+		for (int i = 0; i < SHADOWRAYS; ++i)
 		{
-			vertex n = vertex(lightSamples[i], 1.0f);
+			vertex n = vertex(lightSamples.at(i), 1.0f);
 			ray toLight(startPoint, n);
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				lightHits += 1.0f;
+				//lightHits += 1.0f;
+				lightHits += ( 1.0f * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))) );
 			}
 		}
 		
@@ -223,7 +327,7 @@ color camera::castRay(ray &r, int depth) {
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
 				outRay.setImportance(r.getImportance() * cosTheta);
-				finalColor += (double)cosTheta * castRay(outRay, depth + 1) * PDF;
+				finalColor += (double)cosTheta * castRay(outRay, depth + 1) * PDF; //WTF Why not Divide with pdf?
 			}
 			finalColor /= (double)N;
 			color c;
@@ -235,8 +339,12 @@ color camera::castRay(ray &r, int depth) {
 				c = intersection.second.second->getSurfaceColor();
 			}
 			color dirLight = { lightHits, lightHits, lightHits };
-			finalColor += (LIGHTWATT * dirLight) / (PI*AREA*(double)SAMPLELIGHTS);
-			return finalColor * c;
+
+			//finalColor += ((double)LIGHTWATT * dirLight) / (PI*AREA*(double)SHADOWRAYS);
+			//return finalColor * c;
+			
+			color finC = ( ( (double)LIGHTWATT * dirLight / (double)SHADOWRAYS ) + (2.0 * finalColor)) * c;
+			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
@@ -268,6 +376,51 @@ color camera::castRay(ray &r, int depth) {
 }
 
 
+void multi(camera *c, int dims[4], int thr) {
+	const float pixelWidth = 2.0 / c->getWidht();
+	const float pixelHeight = 2.0 / c->getHeight();
+	const float deltaPW = pixelWidth / 2.0;
+	const float deltaPH = pixelHeight / 2.0;
+
+	for (int i = dims[0]; i < dims[2]; ++i) {
+		for (int j = dims[1]; j < dims[3]; ++j) {
+			float y = (1.0 - i * pixelWidth) - deltaPW;
+			float z = (j * pixelHeight - 1.0) + deltaPH;
+			float x = 0.0;
+
+			vertex s = vertex(c->getCurrentEye()->x, c->getCurrentEye()->y, c->getCurrentEye()->z, 1.0);
+			vertex e = vertex(x, y, z, 1.0);
+
+			//Create ray between eye and pixelplane
+			ray r = ray(s, e);
+			r.setImportance(1.0);
+
+			//cast
+			color col;
+			col = c->castRay(r, 0);
+
+			double m = std::max(std::max(col.x, col.y), col.z);
+			if (m > c->getBrightest(thr)) //&& m < LIGHTWATT) //ASUMES WHITE COLORED LIGHT
+				c->setBrightest(m,thr);
+
+			c->setPixelValue(col,i,j);
+		}
+		
+		c->setPrintReady((i + 1) - dims[0], thr);
+		
+		if (c->isReadyToPrint()) {
+			c->clearConsole();
+			int statuses[4];
+			c->getPrintRows(statuses);
+			c->printContext();
+
+			for (int q = 0; q < 4; ++q) {
+				std::cout << "(Thread " << q << "): " << statuses[q] << " of " << dims[2] - dims[0] << " complete" << std::endl;
+			}
+		}
+	}
+}
+
 
 
 void camera::render() {
@@ -279,56 +432,83 @@ void camera::render() {
 
 	int debugCounter = 0;
 
-	for (int i = 0; i < width; i++) {
+	if (MODE == SINGLE_THREAD) {
+		for (int i = 0; i < width; i++) {		
+			for (int j = 0; j < height; ++j) {
+				float y = (1.0 - i * pixelWidth) - deltaPW;
+				float z = (j * pixelHeight - 1.0) + deltaPH;
+				float x = 0.0;
 
-		std::cout << (i / (float) (width-1.0)) * 100.0 << "% Done..." << std::endl;
+				vertex s = vertex(currentEye->x, currentEye->y, currentEye->z, 1.0);
+				vertex e = vertex(x, y, z, 1.0);
 
-		for (int j = 0; j < height; ++j) {
-			float y = (1.0 - i * pixelWidth) - deltaPW;
-			float z = (j * pixelHeight - 1.0) + deltaPH;
-			float x = 0.0;
+				//Create ray between eye and pixelplane
+				ray r = ray(s, e);
+				r.setImportance(1.0);
 
-			vertex s = vertex(currentEye->x, currentEye->y, currentEye->z, 1.0);
-			vertex e = vertex(x,y,z,1.0);
+				//cast
+				color c;
+				c = castRay(r, 0);
 
-			//Create ray between eye and pixelplane
-			ray r = ray(s,e);
-			r.setImportance(1.0);
+				double m = std::max(std::max(c.x,c.y),c.z); 
+				
+				if (m > brightest[0] && m < LIGHTWATT) //ASUMES WHITE COLORED LIGHT
+					brightest[0] = m;
 
-			//cast
-
-			auto p = findClosestIntersection(r);
-
-			color c;
-			
-			/*
-			if (p.second.first->isImplicit())
-			{
-				c = p.second.first->getColor();
+				image[i][j].setIntensity(c);
 			}
-			else {
-				c = p.second.second->getSurfaceColor();
-			}
-			*/
 			
-
-			c =  castRay(r, 0);
-			image[i][j].setIntensity(c);
-
+			clearConsole();
+			printContext();
+			std::cout << "Progress: " << (i + 1) << " of " << width << " rows complete" << std::endl;
 		}
 	}
+	else if (MODE == MULTI_THREAD) {
+
+		//start x,y - end x,y
+		int hx = width/2;
+		int hy = height/2;
+
+		int a_dims[4] = { 0,0,hx,hy };
+		int b_dims[4] = { hx,0,width,hy };
+		int c_dims[4] = { 0,hy,hx,height };
+		int d_dims[4] = { hx,hy,width,height};
+
+		std::cout << "Started" << std::endl;
+
+		std::vector<std::thread> pool;
+		pool.emplace_back(std::thread{ multi, this, a_dims, 0 });
+		pool.emplace_back(std::thread{ multi, this, b_dims, 1 });
+		pool.emplace_back(std::thread{ multi, this, c_dims, 2 });
+		pool.emplace_back(std::thread{ multi, this, d_dims, 3 });
+
+		for (auto& t : pool) {
+			t.join();
+		}
+	}
+	
 
 	std::cout << "Number of failed pixels: " << debugCounter << std::endl;
 
+	double bMax = std::max(std::max(std::max(brightest[0], brightest[1]), brightest[2]), brightest[3]);
+	//bMax = (bMax + LIGHTWATT) / 2.0;
+	bMax = LIGHTWATT;
+	//bMax = 1.0;
+
+	std::cout << "Trying whatever normalizer for light..." << std::endl;
 
 	//Write
 	FILE *f = fopen("out.ppm", "wb");
 	fprintf(f, "P6\n%i %i 255\n", width, height);
 	for (int y = height; y > 0; y--) {
 		for (int x = 0; x < width; x++) {
-			fputc(image[x][y].getIntensity().x * 255.0, f);   // 0 .. 255
-			fputc(image[x][y].getIntensity().y * 255.0 , f); // 0 .. 255
-			fputc(image[x][y].getIntensity().z * 255.0, f);  // 0 .. 255
+			int cx = std::min((image[x][y].getIntensity().x / bMax) * 255.0, 255.0);
+			int cy = std::min((image[x][y].getIntensity().y / bMax) * 255.0, 255.0);
+			int cz = std::min((image[x][y].getIntensity().z / bMax) * 255.0, 255.0);
+
+			fputc(cx, f);   // 0 .. 255
+			fputc(cy, f); // 0 .. 255
+			fputc(cz, f);  // 0 .. 255
 		}
 	}
 	fclose(f);
