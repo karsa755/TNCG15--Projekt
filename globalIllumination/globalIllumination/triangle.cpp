@@ -30,16 +30,16 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 	glm::vec3 P = glm::cross(D, E2);
 	glm::vec3 Q = glm::cross(T, E1);
 
-	float constant = 1.0 / (glm::dot(P, E1));
+	float constant = 1.0f / (glm::dot(P, E1));
 	glm::vec3 result = constant * glm::vec3(glm::dot(Q, E2), glm::dot(P, T), glm::dot(Q, D));
 
-	if (result.y < (0.0-eps) || result.z < (0.0-eps) || (result.y + result.z) > (1.0+eps))
+	if (result.y < (0.0f-eps) || result.z < (0.0f-eps) || (result.y + result.z) > (1.0f+eps))
 	{
 		//return "nollvektor" if there is no intersection
 		//return glm::vec3(-1.0, -1.0, -1.0);
-		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), nullptr);
+		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0f), nullptr);
 	}
-	if (result.x > 0.0)
+	if (result.x > eps)
 	{
 		glm::vec3 rayStart = glm::vec3(start.x, start.y, start.z);
 		//there is an intersection
@@ -48,7 +48,7 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 	}
 	else
 	{
-		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0), nullptr);
+		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0f), nullptr);
 	}
 	
 }
@@ -78,3 +78,10 @@ vertex triangle::getMidPoint()
 {
 	return (v0+v1+v2) / 3.0f;
 }
+
+std::vector<triangle> triangle::sampleTriangle(float u, float v)
+{
+	float w = 1 - u - v;
+	return std::vector<triangle>();
+}
+

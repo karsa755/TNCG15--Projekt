@@ -126,8 +126,8 @@ color camera::castRay(ray &r, int depth) {
 
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
-	//vertex midPoint = { 10.0f / 3.0f, -6.0f / 3.0f, 15.0f / 3.0f, 1.0f };
 	vertex midPoint = lightSource.getMidPoint();
+
 	if (intersection.second.first == nullptr) {
 		std::cout << "ERROR" << std::endl;
 		return color(0.0,0.0,0.0);
@@ -197,35 +197,58 @@ color camera::castRay(ray &r, int depth) {
 	
 			}
 		}
-		
-		double PDF = 1.0f / (2.0*PI);
-		for (int n = 0; n < N; ++n) {
-			float cosTheta = distribution(generator);
-			float sidPhi = distribution(generator);
-			glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
+		if (intersection.second.first->getSurfProperty() == DIFFUSE)
+		{
+			//std::cout << "D" << std::endl;
+			double PDF = 1.0f / (2.0*PI);
+			for (int n = 0; n < N; ++n) {
+				float cosTheta = distribution(generator);
+				float sidPhi = distribution(generator);
+				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
 
-			glm::vec3 worldSample = localToWorld(X,Y,Z, sample);
-			vertex v1 = vertex(intersection.first + worldSample*0.1f,1.0f);
-			vertex v2 = vertex(worldSample, 1.0f);
-			ray outRay(v1,v2);
-			outRay.setImportance(r.getImportance() * cosTheta);
-			finalColor += (double)cosTheta * castRay(outRay, depth+1) * PDF;
+				glm::vec3 worldSample = localToWorld(X, Y, Z, sample);
+				vertex v1 = vertex(intersection.first + worldSample * 0.1f, 1.0f);
+				vertex v2 = vertex(worldSample, 1.0f);
+				ray outRay(v1, v2);
+				outRay.setImportance(r.getImportance() * cosTheta);
+				finalColor += (double)cosTheta * castRay(outRay, depth + 1) * PDF;
+			}
+			finalColor /= (double)N;
+
+			color c;
+
+			if (intersection.second.first->isImplicit()) {
+				c = intersection.second.first->getColor();
+			}
+			else {
+				c = intersection.second.second->getSurfaceColor();
+			}
+			finalColor += LIGHTWATT * dirLight / (PI*AREA);
+
+			return finalColor * c;
 		}
+		else if (intersection.second.first->getSurfProperty() == MIRROR)
+		{
+			std::cout << intersection.second.first->getPosition().x << "and " << intersection.second.first->getRadius() << std::endl;
+			if (intersection.first.x < 0.01f) {
+				std::cout << "Fuck" << std::endl;
+				return color(1.0, 0.0, 0.0);
+			}
+			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
+			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
+			vertex startPt = vertex(intersection.first + (glm::vec3)glm::normalize(Z)*0.1f, 1.0f);
+			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
+			ray rMirror(startPt, endPt);
+			//std::cout << "x is: " << intersection.first.x << ", y is: " << intersection.first.y <<
+			//	", z is: " << intersection.first.z << std::endl;
+			return castRay(rMirror, depth);
 
-		finalColor /= (double) N;
-
-		color c;
-
-		if (intersection.second.first->isImplicit()) {
-			c = intersection.second.first->getColor();
 		}
-		else {
-			c = intersection.second.second->getSurfaceColor();
+		else
+		{
+			// do nothing atm
+			return color(0.0, 0.0, 0.0);
 		}
-		
-		finalColor += LIGHTWATT *dirLight / (PI*AREA);
-		return finalColor * c;
-
 	}
 
 

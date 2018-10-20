@@ -1,7 +1,7 @@
 #pragma once
 
 #include <utility>
-
+#include <vector>
 #include "definition.h"
 #include "ray.h"
 class triangle
@@ -17,6 +17,7 @@ class triangle
 		bool isEmitter;
 		float getArea();
 		vertex getMidPoint();
+		std::vector<triangle> sampleTriangle(float u, float v);
 
 	private:
 		vertex v0, v1, v2;

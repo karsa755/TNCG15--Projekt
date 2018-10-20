@@ -34,8 +34,8 @@ polyModel createScene()
 	sceneList.push_back(triangle(floorVertices[0], floorVertices[5], floorVertices[3], color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(floorVertices[3], floorVertices[5], floorVertices[4], color(1.0, 1.0, 1.0)));
 	//wall 1, red
-	sceneList.push_back(triangle(roofVertices[1], floorVertices[1], floorVertices[2], color(1.0, 0.0, 0.0)));
-	sceneList.push_back(triangle(floorVertices[2], roofVertices[2], roofVertices[1], color(1.0, 0.0, 0.0)));
+	sceneList.push_back(triangle(roofVertices[1], floorVertices[1], floorVertices[2], color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(floorVertices[2], roofVertices[2], roofVertices[1], color(1.0, 1.0, 1.0)));
 	//wall 2, blue
 	sceneList.push_back(triangle(floorVertices[5], floorVertices[2], roofVertices[5], color(0.0, 0.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[2], roofVertices[5], floorVertices[2], color(0.0, 0.0, 1.0)));
@@ -83,7 +83,7 @@ int main(int, char*[])
 
 	objectList.push_back(&scene);
 	objectList.push_back(&sphere);
-	objectList.push_back(&tetra);
+	//objectList.push_back(&tetra);
 
 	camera *cam = new camera(objectList);
 	cam->render();

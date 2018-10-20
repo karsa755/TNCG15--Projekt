@@ -15,7 +15,7 @@ std::pair<glm::vec3, triangle*> polyModel::rayIntersect(ray& r) {
 		std::pair<glm::vec3, triangle*> temp;
 		temp = it->rayIntersection(r);
 		float dist = glm::distance(temp.first, (glm::vec3) r.getStartVec());
-		if (temp.first != glm::vec3(-1.0) && dist < smallestDist) {
+		if (temp.first != glm::vec3(-1.0f) && dist < smallestDist) {
 			smallestDist = dist;
 			tr = temp;
 			fuck = true;

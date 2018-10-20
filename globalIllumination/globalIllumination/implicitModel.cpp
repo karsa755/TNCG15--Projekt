@@ -36,6 +36,7 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 		distance = sqrtf(a)*t;
 		hitpoint = startVec + t * dir;
 		//normal = (hitpoint - getPosition()) / _radius;
+		//std::cout << " implicit ";
 		tr.first = hitpoint;
 		return tr;
 	}
@@ -55,3 +56,4 @@ color implicitModel::getColor()
 {
 	return _color;
 }
+

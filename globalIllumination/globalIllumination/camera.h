@@ -37,10 +37,7 @@ private:
 	pixel image[width][height] = { pixel() };
 	std::vector<object*> objects;
 	triangle lightSource;
-
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution;
-	
-
 };
 

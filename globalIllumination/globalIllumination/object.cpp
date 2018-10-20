@@ -13,6 +13,11 @@ glm::vec3 object::getPosition() {
 	return position;
 }
 
+int object::getSurfProperty()
+{
+	return surfaceProperty;
+}
+
 float object::getRadius()
 {
 	return 0.0f;
