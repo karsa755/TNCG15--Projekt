@@ -27,8 +27,8 @@ public:
 
 private:
 	void findLightSource();
-	const static int width = 100;
-	const static int height = 100;
+	const static int width = 400;
+	const static int height = 400;
 	const glm::vec3 * currentEye;
 	const glm::vec3 position = glm::vec3(0.0,0.0,0.0);
 	const glm::vec3 eye1 = glm::vec3(-2.0,0.0,0.0);

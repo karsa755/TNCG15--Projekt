@@ -127,6 +127,23 @@ color camera::castRay(ray &r, int depth) {
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
 	vertex midPoint = lightSource.getMidPoint();
+	const int SAMPLELIGHTS = 2;
+	glm::vec3 lightSamples[SAMPLELIGHTS];
+
+	for (int i = 0; i < SAMPLELIGHTS; ++i)
+	{
+		if (i == 0)
+		{
+			lightSamples[i] = midPoint;
+		}
+		else
+		{
+			float u = distribution(generator);
+			float v = (1 - u) * distribution(generator);
+			lightSamples[i] = lightSource.sampleTriangle(u, v);
+		}
+
+	}
 
 	if (intersection.second.first == nullptr) {
 		std::cout << "ERROR" << std::endl;
@@ -143,27 +160,27 @@ color camera::castRay(ray &r, int depth) {
 	if (depth > 1) {
 		//shadow rays n' stuff
 		color dirLight = { 1.0, 1.0, 1.0 };
+
 		glm::vec3 normal = intersection.second.first->isImplicit() ?
 			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
 			: intersection.second.second->getNormal();
 		
 		vertex startPoint = { intersection.first + (normal * 0.001f),1.0f };
-		ray toLight(startPoint, midPoint);
-
-		auto closest = findClosestIntersection(toLight);
-		if (!closest.second.first->isImplicit() && !closest.second.second->isEmitter) {
-			//std::cout << "SHADOW" << std::endl;
-			dirLight = { 0.0,0.0,0.0 };
-			return dirLight;
-		}
-		else
+		double lightHits = 0.0;
+		for (int i = 0; i < SAMPLELIGHTS; ++i)
 		{
-			if (closest.second.first->isImplicit())
-			{
-				return color(0.0, 0.0, 0.0);
+			vertex n = vertex(lightSamples[i], 1.0f);
+			ray toLight(startPoint, n);
+
+			auto closest = findClosestIntersection(toLight);
+			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
+				//std::cout << "(x,y,z) = (" << n.x << "," << n.y << ", " << n.z << ")" << std::endl;
+				lightHits += 1.0f;
+				
 			}
 		}
-		return LIGHTWATT *color(1.0,1.0,1.0) / (PI*AREA);
+
+		return (LIGHTWATT *color(1.0,1.0,1.0)*lightHits)  / (PI*AREA * SAMPLELIGHTS);
 	}
 	else {
 		//recursive call
@@ -181,22 +198,26 @@ color camera::castRay(ray &r, int depth) {
 
 		color dirLight = { 1.0, 1.0, 1.0 };
 		vertex startPoint = { intersection.first + (Z * 0.001f),1.0f };
-		ray toLight(startPoint, midPoint);
 
-		auto closest = findClosestIntersection(toLight);
-		if (!closest.second.first->isImplicit() && !closest.second.second->isEmitter) {
-			//std::cout << "SHADOW" << std::endl;
-			dirLight = { 0.0,0.0,0.0 };
-			
-		}
-		else
+		double lightHits = 0.0;
+		for (int i = 0; i < SAMPLELIGHTS; ++i)
 		{
-			if (closest.second.first->isImplicit())
+			vertex n = vertex(lightSamples[i], 1.0f);
+			ray toLight(startPoint, n);
+
+			auto closest = findClosestIntersection(toLight);
+			if (!closest.second.first->isImplicit() && !closest.second.second->isEmitter) {
+				//do noything
+			}
+			else
 			{
-				dirLight = { 0.0,0.0,0.0 };
-	
+				if (!closest.second.first->isImplicit())
+				{
+					lightHits += 1.0f;
+				}
 			}
 		}
+		
 		if (intersection.second.first->getSurfProperty() == DIFFUSE)
 		{
 			//std::cout << "D" << std::endl;
@@ -223,26 +244,28 @@ color camera::castRay(ray &r, int depth) {
 			else {
 				c = intersection.second.second->getSurfaceColor();
 			}
-			finalColor += LIGHTWATT * dirLight / (PI*AREA);
+			
+			finalColor += (LIGHTWATT * dirLight*lightHits) / (PI*AREA*SAMPLELIGHTS);
 
 			return finalColor * c;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
-			std::cout << intersection.second.first->getPosition().x << "and " << intersection.second.first->getRadius() << std::endl;
 			if (intersection.first.x < 0.01f) {
 				std::cout << "Fuck" << std::endl;
 				return color(1.0, 0.0, 0.0);
 			}
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
+			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			vertex startPt = vertex(intersection.first + (glm::vec3)glm::normalize(Z)*0.1f, 1.0f);
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*2.1f, 1.0f);
+			//vertex startPt  = r.getEndVec();
+
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
 			ray rMirror(startPt, endPt);
 			//std::cout << "x is: " << intersection.first.x << ", y is: " << intersection.first.y <<
 			//	", z is: " << intersection.first.z << std::endl;
 			return castRay(rMirror, depth);
-
 		}
 		else
 		{

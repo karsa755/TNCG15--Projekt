@@ -17,7 +17,7 @@ class triangle
 		bool isEmitter;
 		float getArea();
 		vertex getMidPoint();
-		std::vector<triangle> sampleTriangle(float u, float v);
+		glm::vec3 sampleTriangle(float u, float v);
 
 	private:
 		vertex v0, v1, v2;

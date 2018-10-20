@@ -39,7 +39,7 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 		//return glm::vec3(-1.0, -1.0, -1.0);
 		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0f), nullptr);
 	}
-	if (result.x > eps)
+	if (result.x > 0.0f)
 	{
 		glm::vec3 rayStart = glm::vec3(start.x, start.y, start.z);
 		//there is an intersection
@@ -79,9 +79,14 @@ vertex triangle::getMidPoint()
 	return (v0+v1+v2) / 3.0f;
 }
 
-std::vector<triangle> triangle::sampleTriangle(float u, float v)
+glm::vec3 triangle::sampleTriangle(float u, float v)
 {
+
 	float w = 1 - u - v;
-	return std::vector<triangle>();
+	float x = u * v0.x + v * v1.x + w * v2.x;
+	float y = u * v0.y + v * v1.y + w * v2.y;
+	float z = u * v0.z + v * v1.z + w * v2.z;
+	glm::vec3 res(x, y, z);
+	return res;
 }
 
