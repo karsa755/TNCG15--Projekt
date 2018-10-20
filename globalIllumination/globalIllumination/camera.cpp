@@ -15,7 +15,7 @@ void camera::switchEye(glm::vec3 & e) {
 	currentEye = &e;
 }
 
-triangle * camera::getLightSource()
+triangle  camera::getLightSource()
 {
 	return lightSource;
 }
@@ -31,9 +31,9 @@ void camera::findLightSource()
 			std::vector<triangle> polys = (*it)->getPolyList();
 			for (auto pIt = begin(polys); pIt != end(polys); ++pIt)
 			{
-				if (pIt->isEmitting())
+				if (pIt->isEmitter)
 				{
-					lightSource = &(*pIt);
+					lightSource = (*pIt);
 					return;
 				}
 			}
@@ -126,7 +126,9 @@ color camera::castRay(ray &r, int depth) {
 
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
-	vertex midPoint = { 10.0f / 3.0f, -6.0f / 3.0f, 15.0f / 3.0f, 1.0f };
+	//vertex midPoint = { 10.0f / 3.0f, -6.0f / 3.0f, 15.0f / 3.0f, 1.0f };
+	vertex midPoint = lightSource.getMidPoint();
+	
 	if (intersection.second.first == nullptr) {
 		std::cout << "ERROR" << std::endl;
 		return color(0.0,0.0,0.0);
@@ -165,11 +167,11 @@ color camera::castRay(ray &r, int depth) {
 				return color(0.0, 0.0, 0.0);
 			}
 		}
-		return LIGHTWATT *color(1.0,1.0,1.0) / (PI*60);
+		return LIGHTWATT *color(1.0,1.0,1.0) / (PI*AREA);
 	}
 	else {
 		//recursive call
-		int N = 4;
+		int N = 2;
 		glm::vec3 X;
 		glm::vec3 Y;
 		glm::vec3 I = intersection.first - (glm::vec3)r.getStartVec();
@@ -224,7 +226,7 @@ color camera::castRay(ray &r, int depth) {
 			c = intersection.second.second->getSurfaceColor();
 		}
 		
-		finalColor += LIGHTWATT *dirLight / (PI*60);
+		finalColor += LIGHTWATT *dirLight / (PI*AREA);
 		return finalColor * c;
 
 	}

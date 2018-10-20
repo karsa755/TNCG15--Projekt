@@ -16,6 +16,7 @@ class triangle
 		glm::vec3 getNormal();
 		bool isEmitter;
 		float getArea();
+		vertex getMidPoint();
 	private:
 		
 		vertex v0, v1, v2;

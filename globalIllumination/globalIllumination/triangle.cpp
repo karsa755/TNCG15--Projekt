@@ -1,6 +1,6 @@
 #include "triangle.h"
 
-#define eps std::numeric_limits<float>::epsilon()
+
 
 triangle::triangle() {
 
@@ -72,4 +72,9 @@ float triangle::getArea()
 {
 	float dafq = 0.5f * glm::length(glm::cross(glm::vec3(v1 / v1.w - v0 / v0.w), glm::vec3(v2 / v2.w - v1 / v1.w)));
 	return dafq;
+}
+
+vertex triangle::getMidPoint()
+{
+	return (v0+v1+v2) / 3.0f;
 }
