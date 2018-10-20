@@ -127,7 +127,7 @@ color camera::castRay(ray &r, int depth) {
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
 	vertex midPoint = lightSource.getMidPoint();
-	const int SAMPLELIGHTS = 2;
+	const int SAMPLELIGHTS = 1;
 	glm::vec3 lightSamples[SAMPLELIGHTS];
 
 	for (int i = 0; i < SAMPLELIGHTS; ++i)
@@ -180,7 +180,7 @@ color camera::castRay(ray &r, int depth) {
 			}
 		}
 
-		return (LIGHTWATT *color(1.0,1.0,1.0)*lightHits)  / (PI*AREA * SAMPLELIGHTS);
+		return (LIGHTWATT *color(lightHits, lightHits, lightHits))  / (PI*AREA * (double)SAMPLELIGHTS);
 	}
 	else {
 		//recursive call
@@ -195,8 +195,6 @@ color camera::castRay(ray &r, int depth) {
 		getLocalCoordSystem(Z,I,X,Y);
 
 		color finalColor(0.0, 0.0, 0.0);
-
-		color dirLight = { 1.0, 1.0, 1.0 };
 		vertex startPoint = { intersection.first + (Z * 0.001f),1.0f };
 
 		double lightHits = 0.0;
@@ -206,15 +204,8 @@ color camera::castRay(ray &r, int depth) {
 			ray toLight(startPoint, n);
 
 			auto closest = findClosestIntersection(toLight);
-			if (!closest.second.first->isImplicit() && !closest.second.second->isEmitter) {
-				//do noything
-			}
-			else
-			{
-				if (!closest.second.first->isImplicit())
-				{
-					lightHits += 1.0f;
-				}
+			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
+				lightHits += 1.0f;
 			}
 		}
 		
@@ -235,7 +226,6 @@ color camera::castRay(ray &r, int depth) {
 				finalColor += (double)cosTheta * castRay(outRay, depth + 1) * PDF;
 			}
 			finalColor /= (double)N;
-
 			color c;
 
 			if (intersection.second.first->isImplicit()) {
@@ -244,9 +234,8 @@ color camera::castRay(ray &r, int depth) {
 			else {
 				c = intersection.second.second->getSurfaceColor();
 			}
-			
-			finalColor += (LIGHTWATT * dirLight*lightHits) / (PI*AREA*SAMPLELIGHTS);
-
+			color dirLight = { lightHits, lightHits, lightHits };
+			finalColor += (LIGHTWATT * dirLight) / (PI*AREA*(double)SAMPLELIGHTS);
 			return finalColor * c;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
@@ -258,7 +247,7 @@ color camera::castRay(ray &r, int depth) {
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*2.1f, 1.0f);
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*5.0f, 1.0f);
 			//vertex startPt  = r.getEndVec();
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
