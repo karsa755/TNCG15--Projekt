@@ -46,7 +46,6 @@ void camera::getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::ve
 	glm::vec3 Im = I - (glm::dot(I,Z) * Z);
 	X = glm::normalize(Im);
 	Y = glm::cross(-X,Z);
-
 }
 
 glm::vec3 camera::localToWorld(const glm::vec3 & X, const glm::vec3 & Y, const glm::vec3 & Z, const glm::vec3 & v)
@@ -69,6 +68,7 @@ glm::vec3 sampleHemisphere(const float &cosTheta, const float &sidPhi) {
 	//float x = sinTheta * sinf(phi);
 	//float y = -(sinTheta * cosf(phi));
 	//return glm::vec3(x,y,cosTheta);
+
 	float z = sinTheta * sinf(phi);
 	float x = (sinTheta * cosf(phi));
 	return glm::vec3(x, cosTheta, z);
@@ -128,14 +128,10 @@ color camera::castRay(ray &r, int depth) {
 	auto intersection = findClosestIntersection(r);
 	//vertex midPoint = { 10.0f / 3.0f, -6.0f / 3.0f, 15.0f / 3.0f, 1.0f };
 	vertex midPoint = lightSource.getMidPoint();
-	
 	if (intersection.second.first == nullptr) {
 		std::cout << "ERROR" << std::endl;
 		return color(0.0,0.0,0.0);
 	}
-
-	
-
 
 	if (intersection.second.second != nullptr && !intersection.second.first->isImplicit() && intersection.second.second->isEmitter) {
 		//hitting light source
@@ -213,12 +209,13 @@ color camera::castRay(ray &r, int depth) {
 			vertex v2 = vertex(worldSample, 1.0f);
 			ray outRay(v1,v2);
 			outRay.setImportance(r.getImportance() * cosTheta);
-
 			finalColor += (double)cosTheta * castRay(outRay, depth+1) * PDF;
 		}
 
 		finalColor /= (double) N;
+
 		color c;
+
 		if (intersection.second.first->isImplicit()) {
 			c = intersection.second.first->getColor();
 		}
@@ -230,6 +227,9 @@ color camera::castRay(ray &r, int depth) {
 		return finalColor * c;
 
 	}
+
+
+	
 }
 
 
@@ -292,7 +292,7 @@ void camera::render() {
 	for (int y = height; y > 0; y--) {
 		for (int x = 0; x < width; x++) {
 			fputc(image[x][y].getIntensity().x * 255.0, f);   // 0 .. 255
-			fputc(image[x][y].getIntensity().y * 255.0, f); // 0 .. 255
+			fputc(image[x][y].getIntensity().y * 255.0 , f); // 0 .. 255
 			fputc(image[x][y].getIntensity().z * 255.0, f);  // 0 .. 255
 		}
 	}

@@ -17,8 +17,8 @@ class triangle
 		bool isEmitter;
 		float getArea();
 		vertex getMidPoint();
+
 	private:
-		
 		vertex v0, v1, v2;
 		color surfaceColor;
 		direction normal;
