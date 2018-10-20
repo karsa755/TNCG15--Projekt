@@ -19,7 +19,6 @@ public:
 	void getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::vec3 &X, glm::vec3 &Y);
 	glm::vec3 localToWorld(const glm::vec3 &X, const glm::vec3 &Y, const glm::vec3 &Z, const glm::vec3 & v);
 	glm::vec3 worldToLocal(const glm::vec3 &X, const glm::vec3 &Y, const glm::vec3 &Z, const glm::vec3 & v);
-	color calcLD(std::pair<glm::vec3, std::pair<object*, triangle*>> p);
 
 	std::pair<glm::vec3, std::pair<object*, triangle*>> findClosestIntersection(ray &r);
 	color castRay(ray &r, int depth);

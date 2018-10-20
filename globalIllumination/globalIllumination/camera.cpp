@@ -129,61 +129,25 @@ color camera::castRay(ray &r, int depth) {
 
 	if (intersection.second.first == nullptr) {
 		std::cout << "ERROR" << std::endl;
-		return color(1.0,0.0,0.0);
+		return color(0.0,0.0,0.0);
 	}
 
 	
 	if (intersection.second.second != nullptr && !intersection.second.first->isImplicit() && intersection.second.second->isEmitter) {
 		//hitting light source
-		//std::cout << "TO LIGHTSOURCE" << std::endl;
+		std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
 		return ret;
 	}
 	
-	if (depth > -1) {
+	if (depth > 3) {
 		//shadow rays n' stuff
-
-		color surfaceColor;
-		glm::vec3 normal;
-
-		if (intersection.second.first->isImplicit())
-		{
-			surfaceColor = intersection.second.first->getColor();
-			normal = glm::normalize(intersection.first - intersection.second.first->getPosition());
-		}
-		else {
-			surfaceColor = intersection.second.second->getSurfaceColor();
-			normal = intersection.second.second->getNormal();
-		}
-
-		if (!intersection.second.first->isImplicit() && !intersection.second.second->isEmitter) {
-			vertex midPoint = { 10.0f / 3.0f, -6.0f / 3.0f, 15.0f / 3.0f, 1.0f };
-			vertex startPoint = { intersection.first + (normal * 0.0001f),1.0f };
-			ray toLight(startPoint, midPoint);
-
-			auto closest = findClosestIntersection(toLight);
-
-
-			if (!intersection.second.first->isImplicit() && !closest.second.first->isImplicit()) {
-				if (!closest.second.second->isEmitter) {
-					//std::cout << "SHADOW" << std::endl;
-					surfaceColor = { 0.0,0.0,0.0 };
-				}
-			}
-			else {
-				//std::cout << "shadow" << std::endl;
-				surfaceColor = { 0.0,0.0,0.0 };
-			}
-		}
-		
-
-		return surfaceColor;
+		return color(1.0,1.0,1.0);
 
 	}
 	else {
 		//recursive call
-
-		int N = 1;
+		int N = 3;
 		glm::vec3 X;
 		glm::vec3 Y;
 		glm::vec3 I = intersection.first - (glm::vec3)r.getStartVec();
@@ -201,7 +165,7 @@ color camera::castRay(ray &r, int depth) {
 			glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
 
 			glm::vec3 worldSample = localToWorld(X,Y,Z, sample);
-			vertex v1 = vertex(intersection.first + Z*0.01f,1.0f);
+			vertex v1 = vertex(intersection.first + worldSample*0.1f,1.0f);
 			vertex v2 = vertex(worldSample, 1.0f);
 			ray outRay(v1,v2);
 			outRay.setImportance(r.getImportance() * cosTheta);
@@ -219,50 +183,12 @@ color camera::castRay(ray &r, int depth) {
 			c = intersection.second.second->getSurfaceColor();
 		}
 
-		return finalColor * c;//+ calcLD(intersection);
+		return finalColor * c;
 
 	}
 }
 
 
-color camera::calcLD(std::pair<glm::vec3, std::pair<object*, triangle*>> p)
-{
-	color c = { 1.0,1.0,1.0 };
-	glm::vec3 normal;
-
-	//THIS SHOULD BE DONE IN LOOP, SAMPLE MANY POINTS
-
-	if (p.second.first->isImplicit())
-	{
-		normal = glm::normalize(p.first - p.second.first->getPosition());
-	}
-	else {
-		normal = p.second.second->getNormal();
-	}
-
-	if(!p.second.first->isImplicit() && !p.second.second->isEmitter) {
-		vertex midPoint = { 10.0f / 3.0f, -6.0f / 3.0f, 15.0f / 3.0f, 1.0f };
-		vertex startPoint = { p.first + (normal * 0.0001f),1.0f };
-		ray toLight(startPoint, midPoint);
-
-		auto closest = findClosestIntersection(toLight);
-
-
-		if (!closest.second.first->isImplicit()) {
-			if (!closest.second.second->isEmitter) {
-				//std::cout << "SHADOW" << std::endl;
-				c = { 0.0,0.0,0.0 };
-			}
-		}
-		else {
-			//std::cout << "shadow" << std::endl;
-			c = { 0.0,0.0,0.0 };
-		}
-	}
-
-
-	return c;
-}
 
 
 void camera::render() {
@@ -319,7 +245,7 @@ void camera::render() {
 	//Write
 	FILE *f = fopen("out.ppm", "wb");
 	fprintf(f, "P6\n%i %i 255\n", width, height);
-	for (int y = height; y > 0; y--) {
+	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			fputc(image[x][y].getIntensity().x * 255.0, f);   // 0 .. 255
 			fputc(image[x][y].getIntensity().y * 255.0, f); // 0 .. 255

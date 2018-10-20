@@ -1,5 +1,5 @@
 #include "implicitModel.h"
-#include<iostream>
+
 
 
 implicitModel::implicitModel(float radius, glm::vec3 center, int prop, color c): object(center, prop), _color(c), _radius(radius)
@@ -24,12 +24,10 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 	b = glm::dot(dir,2.0f * (startVec - getPosition()));
 	c = glm::dot(getPosition(), getPosition()) + glm::dot(startVec, startVec) - 2.0f * glm::dot(startVec, getPosition()) - _radius * _radius;
 	d = b * b + (-4.0f)*a*c;
-	if (d < 0.0f)
+	if (d < 0)
 	{
 		return tr;
 	}
-	d = sqrt(d);
-	std::cout << "";
 	float t = (-0.5f)*(b + d) / a;
 	if (t > 0.0f)
 	{
