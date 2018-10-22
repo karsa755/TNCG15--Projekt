@@ -183,13 +183,13 @@ void camera::setNewMaxIntensity(glm::dvec3 val, int th)
 glm::vec3 sampleHemisphere(const float &cosTheta, const float &sidPhi) {
 	float sinTheta = sqrtf(1.0 - cosTheta * cosTheta);
 	float phi = 2.0 * PI * sidPhi;
-	//float x = sinTheta * sinf(phi);
-	//float y = -(sinTheta * cosf(phi));
-	//return glm::vec3(x,y,cosTheta);
+	float x = sinTheta * sinf(phi);
+	float y = -(sinTheta * cosf(phi));
+	return glm::vec3(x,y,-cosTheta);
 
-	float z = sinTheta * sinf(phi);
-	float x = (sinTheta * cosf(phi));
-	return glm::vec3(x, cosTheta, z);
+	//float z = sinTheta * sinf(phi);
+	//float x = (sinTheta * cosf(phi));
+	//return glm::vec3(x, cosTheta, z);
 }
 
 
@@ -280,7 +280,14 @@ color camera::castRay(ray &r, int depth) {
 		//hitting light source
 		//std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
-		return (double)LIGHTWATT* ret;
+		//return (double)LIGHTWATT* ret;
+		glm::vec3 normal = intersection.second.first->isImplicit() ?
+			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
+			: intersection.second.second->getNormal();
+		double lightVal = (LIGHTWATT * (double)std::max(0.0f, glm::dot(normal, glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)intersection.first))))
+			/ (std::pow(((double)glm::distance(intersection.first, (glm::vec3)r.getStartVec())), 2.0) * 2.0 * PI);
+		
+		return ret*LIGHTWATT / (2.0 * PI);
 	}
 	
 	if (depth >= MAXDEPTH) {
@@ -300,11 +307,12 @@ color camera::castRay(ray &r, int depth) {
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				lightHits += (1.0f * std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))));
+
+				lightHits += (1.0 * (double)std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(((double)glm::distance(intersection.first, closest.first)), 2.0);
 			}
 		}
 
-		return (rho*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / (1.0 * (double)AREA * (double)SHADOWRAYS);
+		return (rho*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS);
 	}
 	else {
 		//recursive call
@@ -329,7 +337,7 @@ color camera::castRay(ray &r, int depth) {
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				lightHits += ( 1.0f * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))) );
+				lightHits += ( 1.0 * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(((double)glm::distance(intersection.first, closest.first)), 2.0);
 			}
 		}
 		
@@ -362,7 +370,7 @@ color camera::castRay(ray &r, int depth) {
 			}
 			color dirLight = { lightHits, lightHits, lightHits };
 
-			color finC = rho * ( ( (double)LIGHTWATT * dirLight / ((double)SHADOWRAYS*AREA)) + (finalColor)) * c;
+			color finC = rho * ( ( (double)LIGHTWATT * dirLight / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + (finalColor)) * c;
 			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
@@ -374,7 +382,7 @@ color camera::castRay(ray &r, int depth) {
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*0.01f, 1.0f);
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*5.0f, 1.0f);
 			//vertex startPt  = r.getEndVec();
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
@@ -519,16 +527,17 @@ void camera::render() {
 
 	double bMax = std::max(std::max(std::max(brightest[0], brightest[1]), brightest[2]), brightest[3]);
 	//color beta = (intensities[0] + intensities[1] + intensities[2] + intensities[3]) / (double)(width*height);
-	//color range = color(0.0);
-	//range.x = std::max(std::max(intensityRange[0].x, intensityRange[1].x), std::max(intensityRange[2].x, intensityRange[3].x));
-	//range.y = std::max(std::max(intensityRange[0].y, intensityRange[1].y), std::max(intensityRange[2].y, intensityRange[3].y));
-	//range.z = std::max(std::max(intensityRange[0].z, intensityRange[1].z), std::max(intensityRange[2].z, intensityRange[3].z));
-	//double rangeMAX = std::max(std::max(range.x, range.y), range.z);
+	color range = color(0.0);
+	range.x = std::max(std::max(intensityRange[0].x, intensityRange[1].x), std::max(intensityRange[2].x, intensityRange[3].x));
+	range.y = std::max(std::max(intensityRange[0].y, intensityRange[1].y), std::max(intensityRange[2].y, intensityRange[3].y));
+	range.z = std::max(std::max(intensityRange[0].z, intensityRange[1].z), std::max(intensityRange[2].z, intensityRange[3].z));
+	double rangeMAX = std::max(std::max(range.x, range.y), range.z);
 	//double betaMAX = std::max(std::max(beta.x, beta.y), beta.z);
 	//bMax = (bMax + LIGHTWATT) / 2.0;
 	//bMax = LIGHTWATT;
 	//bMax = 1.0;
 	std::cout << "Trying whatever normalizer for light..." << std::endl;
+	std::cout << rangeMAX << " " << bMax << std::endl;
 	
 	//Write
 	FILE *f = fopen("out.ppm", "wb");
@@ -540,19 +549,9 @@ void camera::render() {
 			//double sigmoidX = std::pow(sigMoidNormalize(image[x][y].getIntensity().x, range.x, range.x / 2.0) ,1.0);
 			//double sigmoidY = std::pow(sigMoidNormalize(image[x][y].getIntensity().y, range.y, range.y / 2.0), 1.0);
 			//double sigmoidZ = std::pow(sigMoidNormalize(image[x][y].getIntensity().z, range.z, range.z / 2.0), 1.0);
-
-			if (image[x][y].getIntensity().x == LIGHTWATT)
-			{
-				fputc(255, f);   // 0 .. 255
-				fputc(255, f);
-				fputc(255, f);
-			}
-			else
-			{
-				fputc(std::pow(std::min((image[x][y].getIntensity().x / bMax), 1.0), 0.5) * 255, f);   // 0 .. 255
-				fputc(std::pow(std::min((image[x][y].getIntensity().y / bMax), 1.0), 0.5) * 255, f); // 0 .. 255
-				fputc(std::pow(std::min((image[x][y].getIntensity().z / bMax), 1.0), 0.5) * 255, f);  // 0 .. 255
-			}
+			fputc(std::pow(std::min((image[x][y].getIntensity().x / rangeMAX), 1.0), 0.5) * 255, f);   // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().y / rangeMAX), 1.0), 0.5) * 255, f); // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().z / rangeMAX), 1.0), 0.5) * 255, f);  // 0 .. 255
 
 
 			//fputc(sigmoidX * 255, f);   // 0 .. 255
