@@ -378,12 +378,12 @@ color camera::castRay(ray &r, int depth) {
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			//float addExtra = 0.0f;
-			//while(glm::distance(intersection.first + (glm::vec3)reflectDir*addExtra, intersection.second.first->getPosition()) <  intersection.second.first->getRadius() + 0.1f)
-			//{
-			//	addExtra += 5.0f;	
-			//}
-
+			float addExtra = 0.0f;
+			while(glm::distance(intersection.first + (glm::vec3)reflectDir*addExtra, intersection.second.first->getPosition()) <  intersection.second.first->getRadius())
+			{
+				addExtra += 0.1f;	
+			}
+		
 			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 5.0f, 1.0f);
 			//vertex startPt  = r.getEndVec();
 
