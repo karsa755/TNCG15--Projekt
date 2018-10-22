@@ -382,7 +382,7 @@ color camera::castRay(ray &r, int depth) {
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*5.0f, 1.0f);
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*0.01f, 1.0f);
 			//vertex startPt  = r.getEndVec();
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
@@ -429,7 +429,7 @@ void multi(camera *c, int dims[4], int thr) {
 			c->addIntensity(col, thr);
 
 			double m = std::max(std::max(col.x, col.y), col.z);
-			if (m > c->getBrightest(thr)) // && m < LIGHTWATT) //ASUMES WHITE COLORED LIGHT
+			if (m > c->getBrightest(thr)  && m < LIGHTWATT / (2.0 * PI)) //ASUMES WHITE COLORED LIGHT
 				c->setBrightest(m,thr);
 
 			c->setNewMaxIntensity(col, thr);
@@ -536,6 +536,7 @@ void camera::render() {
 	//bMax = (bMax + LIGHTWATT) / 2.0;
 	//bMax = LIGHTWATT;
 	//bMax = 1.0;
+	
 	std::cout << "Trying whatever normalizer for light..." << std::endl;
 	std::cout << rangeMAX << " " << bMax << std::endl;
 	
@@ -549,9 +550,9 @@ void camera::render() {
 			//double sigmoidX = std::pow(sigMoidNormalize(image[x][y].getIntensity().x, range.x, range.x / 2.0) ,1.0);
 			//double sigmoidY = std::pow(sigMoidNormalize(image[x][y].getIntensity().y, range.y, range.y / 2.0), 1.0);
 			//double sigmoidZ = std::pow(sigMoidNormalize(image[x][y].getIntensity().z, range.z, range.z / 2.0), 1.0);
-			fputc(std::pow(std::min((image[x][y].getIntensity().x / rangeMAX), 1.0), 0.5) * 255, f);   // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().y / rangeMAX), 1.0), 0.5) * 255, f); // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().z / rangeMAX), 1.0), 0.5) * 255, f);  // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().x / bMax), 1.0), 0.5) * 255, f);   // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().y / bMax), 1.0), 0.5) * 255, f); // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().z / bMax), 1.0), 0.5) * 255, f);  // 0 .. 255
 
 
 			//fputc(sigmoidX * 255, f);   // 0 .. 255
