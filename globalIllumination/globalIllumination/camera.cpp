@@ -375,14 +375,16 @@ color camera::castRay(ray &r, int depth) {
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
-			if (intersection.first.x < 0.01f) {
-				std::cout << "Fuck" << std::endl;
-				return color(1.0, 0.0, 0.0) * LIGHTWATT;
-			}
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*0.01f, 1.0f);
+			//float addExtra = 0.0f;
+			//while(glm::distance(intersection.first + (glm::vec3)reflectDir*addExtra, intersection.second.first->getPosition()) <  intersection.second.first->getRadius() + 0.1f)
+			//{
+			//	addExtra += 5.0f;	
+			//}
+
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 5.0f, 1.0f);
 			//vertex startPt  = r.getEndVec();
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
