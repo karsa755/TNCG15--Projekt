@@ -277,13 +277,11 @@ color camera::castRay(ray &r, int depth) {
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				//std::cout << "(x,y,z) = (" << n.x << "," << n.y << ", " << n.z << ")" << std::endl;
-				//lightHits += 1.0f;
 				lightHits += (1.0f * std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))));
 			}
 		}
 
-		return ((double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / (PI*AREA * (double)SHADOWRAYS);
+		return ((double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / (1.0 * (double)AREA * (double)SHADOWRAYS);
 	}
 	else {
 		//recursive call
@@ -308,7 +306,6 @@ color camera::castRay(ray &r, int depth) {
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				//lightHits += 1.0f;
 				lightHits += ( 1.0f * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))) );
 			}
 		}
@@ -340,22 +337,19 @@ color camera::castRay(ray &r, int depth) {
 			}
 			color dirLight = { lightHits, lightHits, lightHits };
 
-			//finalColor += ((double)LIGHTWATT * dirLight) / (PI*AREA*(double)SHADOWRAYS);
-			//return finalColor * c;
-			
-			color finC = ( ( (double)LIGHTWATT * dirLight / (double)SHADOWRAYS ) + (2.0 * finalColor)) * c;
+			color finC = ( ( (double)LIGHTWATT * dirLight / ((double)SHADOWRAYS*AREA)) + (finalColor)) * c;
 			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
 			if (intersection.first.x < 0.01f) {
 				std::cout << "Fuck" << std::endl;
-				return color(1.0, 0.0, 0.0);
+				return color(1.0, 0.0, 0.0) * LIGHTWATT;
 			}
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*5.0f, 1.0f);
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir*0.001f, 1.0f);
 			//vertex startPt  = r.getEndVec();
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
@@ -452,7 +446,7 @@ void camera::render() {
 
 				double m = std::max(std::max(c.x,c.y),c.z); 
 				
-				if (m > brightest[0] && m < LIGHTWATT) //ASUMES WHITE COLORED LIGHT
+				if (m > brightest[0]) //&& m < LIGHTWATT) //ASUMES WHITE COLORED LIGHT
 					brightest[0] = m;
 
 				image[i][j].setIntensity(c);
@@ -465,7 +459,7 @@ void camera::render() {
 	}
 	else if (MODE == MULTI_THREAD) {
 
-		//start x,y - end x,y
+		
 		int hx = width/2;
 		int hy = height/2;
 
