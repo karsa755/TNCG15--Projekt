@@ -5,7 +5,7 @@ class implicitModel :
 	public object
 {
 public:
-	implicitModel(float radius, glm::vec3 center, int prop, color c = color(0.0f, 0.0f, 1.0f));
+	implicitModel(float radius, glm::vec3 center, int prop, double r, color c = color(0.0f, 0.0f, 1.0f));
 	~implicitModel();
 	std::pair<glm::vec3, triangle*> rayIntersect(ray& r);
 	bool isImplicit();

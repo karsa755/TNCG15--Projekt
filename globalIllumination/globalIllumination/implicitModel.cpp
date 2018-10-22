@@ -2,7 +2,7 @@
 
 
 
-implicitModel::implicitModel(float radius, glm::vec3 center, int prop, color c): object(center, prop), _color(c), _radius(radius)
+implicitModel::implicitModel(float radius, glm::vec3 center, int prop, double r, color c): object(center, prop, r), _color(c), _radius(radius)
 {	
 }
 

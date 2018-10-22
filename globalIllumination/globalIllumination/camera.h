@@ -25,7 +25,7 @@ public:
 	void setBranchFactor(int f);
 	void setShadowRays(int n);
 	void setDepth(int d);
-
+	double sigMoidNormalize(double pixVal, double range, double beta);
 	int getWidht();
 	int getHeight();
 	const glm::vec3* getCurrentEye();
@@ -39,7 +39,8 @@ public:
 	void getPrintRows(int toReturn[4]);
 	void clearReadyToPrint();
 	void printContext();
-
+	void addIntensity(glm::dvec3 val, int th);
+	void setNewMaxIntensity(glm::dvec3 val, int th);
 	std::pair<glm::vec3, std::pair<object*, triangle*>> findClosestIntersection(ray &r);
 	color castRay(ray &r, int depth);
 
@@ -62,6 +63,8 @@ private:
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution;
 	double brightest[4] = { 1.0, 1.0, 1.0, 1.0 };
+	glm::dvec3 intensities[4] = { glm::dvec3(0.0) };
+	glm::dvec3 intensityRange[4] = { glm::dvec3(0.0) };
 	std::pair<bool, int> timeToPrint[4] = { std::pair<bool,int>(false,0) };
 	
 	int FACTOR = 1;

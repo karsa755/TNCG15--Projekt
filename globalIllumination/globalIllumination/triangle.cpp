@@ -6,8 +6,8 @@ triangle::triangle() {
 
 }
 
-triangle::triangle(vertex& _v0, vertex& _v1, vertex& _v2, color _c, bool emitter):
-	v0(_v0), v1(_v1), v2(_v2), surfaceColor(_c), isEmitter(emitter)
+triangle::triangle(vertex& _v0, vertex& _v1, vertex& _v2, double r, color _c, bool emitter):
+	v0(_v0), v1(_v1), v2(_v2), surfaceColor(_c), isEmitter(emitter), rho(r)
 {
 	normal = direction(glm::normalize(glm::cross(glm::vec3(v1/v1.w-v0/v0.w), glm::vec3(v2/v2.w-v1/v1.w))));
 }
@@ -88,5 +88,10 @@ glm::vec3 triangle::sampleTriangle(float u, float v)
 	float z = u * v0.z + v * v1.z + w * v2.z;
 	glm::vec3 res(x, y, z);
 	return res;
+}
+
+double triangle::getRho()
+{
+	return rho;
 }
 
