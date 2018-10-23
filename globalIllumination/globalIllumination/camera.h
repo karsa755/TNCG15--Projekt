@@ -2,8 +2,9 @@
 
 #include <iostream>
 #include <random>
-
+#include <chrono>
 #include <thread>
+#include <stack>
 #include <Windows.h>
 
 #include "definition.h"
@@ -45,13 +46,13 @@ public:
 	color castRay(ray &r, int depth);
 
 	void render();
-
-
+	std::default_random_engine generator;
+	std::uniform_real_distribution<float> distribution;
 
 private:
 	void findLightSource();
-	const static int width = 200;
-	const static int height = 200;
+	const static int width = 100;
+	const static int height = 100;
 	const glm::vec3 * currentEye;
 	const glm::vec3 position = glm::vec3(0.0,0.0,0.0);
 	const glm::vec3 eye1 = glm::vec3(-2.0,0.0,0.0);
@@ -60,8 +61,7 @@ private:
 	pixel image[width][height] = { pixel() };
 	std::vector<object*> objects;
 	triangle lightSource;
-	std::default_random_engine generator;
-	std::uniform_real_distribution<float> distribution;
+	
 	double brightest[4] = { 1.0, 1.0, 1.0, 1.0 };
 	glm::dvec3 intensities[4] = { glm::dvec3(0.0) };
 	glm::dvec3 intensityRange[4] = { glm::dvec3(0.0) };

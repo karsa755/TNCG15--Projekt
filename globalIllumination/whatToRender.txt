@@ -1,0 +1,56 @@
+//Check intersections
+			//std::vector<std::pair<glm::vec3, triangle*>> intersections;
+			std::vector<std::pair<glm::vec3, std::pair<object* , triangle* >>> intersections;
+			std::pair<glm::vec3, triangle*> tr;
+			std::pair<glm::vec3, std::pair<object*, triangle* >> finalBoss;
+			for (auto it = begin(objects); it != end(objects); ++it) {
+				tr = (*it)->rayIntersect(r);
+				finalBoss.first = tr.first;
+				finalBoss.second.second = tr.second;
+				finalBoss.second.first = *it;
+				if (tr.second != nullptr) {
+					intersections.push_back(finalBoss);
+				}
+				else
+				{
+					if ((*it)->isImplicit() && finalBoss.first != glm::vec3(-1.0f))
+					{
+						intersections.push_back(finalBoss);
+
+					}
+				}
+			}
+
+			//we have all intersections, find the closest
+			auto it = begin(intersections);
+			if (it != end(intersections)) {
+				finalBoss = *it;
+				++it;
+				for (; it != end(intersections); ++it) {
+					if (it->first.x < finalBoss.first.x) {
+						finalBoss = *it;
+					}
+				}
+
+				//shoud do stuff with ray...
+
+
+				//set image color
+				if (finalBoss.second.second != nullptr)
+				{
+					color c = finalBoss.second.second->getSurfaceColor();
+					image[i][j].setIntensity(c);
+				}
+				else
+				{
+					glm::vec3 normal = (tr.first - finalBoss.second.first->getPosition()) / finalBoss.second.first->getRadius();
+					color c = finalBoss.second.first->getColor();
+					image[i][j].setIntensity(c);
+				}
+			}
+			else {
+				std::cout << "Error, No collision...." << std::endl;
+				color c = color(0.0, 0.0, 0.0);
+				image[i][j].setIntensity(c);
+				++debugCounter;
+			}

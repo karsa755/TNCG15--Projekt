@@ -30,9 +30,9 @@ polyModel createScene()
 	floorVertices[4] = vertex(13.0f, 0.0f, -5.0f, 1.0f);
 	floorVertices[5] = vertex(10.0f, -6.0f, -5.0f, 1.0f);
 	//roof triangles
-	lightVerts[0] = vertex(5.5f, 0.0f, 4.0f, 1.0f);
-	lightVerts[1] = vertex(4.5f, 1.0f, 4.0f, 1.0f);
-	lightVerts[2] = vertex(4.5f, -1.0f, 4.0f, 1.0f);
+	lightVerts[0] = vertex(5.5f, 0.0f, 0.0f, 1.0f);
+	lightVerts[1] = vertex(4.5f, 1.0f, 0.0f, 1.0f);
+	lightVerts[2] = vertex(4.5f, -1.0f, 0.0f, 1.0f);
 	//light source
 	sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(1.0, 1.0, 1.0), true));
 
@@ -112,7 +112,7 @@ int main(int, char*[])
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setBranchFactor(2);
 	cam->setShadowRays(2);
-	cam->setDepth(2);
+	cam->setDepth(0);
 	
 
 

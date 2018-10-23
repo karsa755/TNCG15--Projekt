@@ -2,13 +2,12 @@
 
 
 
-camera::camera(std::vector<object*> ol)
+camera::camera(std::vector<object*> ol) //: generator(std::chrono::system_clock::now().time_since_epoch().count())
 {
 	currentEye = &eye2;
 	objects = ol;
 	findLightSource();
-	
-	distribution = std::uniform_real_distribution<float>(0, 1);
+	distribution = std::uniform_real_distribution<float>(0, 1);	
 }
 
 void camera::switchEye(glm::vec3 & e) {
@@ -280,17 +279,12 @@ color camera::castRay(ray &r, int depth) {
 		//hitting light source
 		//std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
-		//return (double)LIGHTWATT* ret;
-		glm::vec3 normal = intersection.second.first->isImplicit() ?
-			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
-			: intersection.second.second->getNormal();
-		double lightVal = (LIGHTWATT * (double)std::max(0.0f, glm::dot(normal, glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)intersection.first))))
-			/ (std::pow(((double)glm::distance(intersection.first, (glm::vec3)r.getStartVec())), 2.0) * 2.0 * PI);
-		
+
 		return ret*LIGHTWATT / (2.0 * PI);
 	}
 	
-	if (depth >= MAXDEPTH) {
+	
+	if (depth >= MAXDEPTH ) {
 		//shadow rays n' stuff
 		color dirLight = { 1.0, 1.0, 1.0 };
 
@@ -311,8 +305,15 @@ color camera::castRay(ray &r, int depth) {
 				lightHits += (1.0 * (double)std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(((double)glm::distance(intersection.first, closest.first)), 2.0);
 			}
 		}
+		color c;
 
-		return (rho*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS);
+		if (intersection.second.first->isImplicit()) {
+			c = intersection.second.first->getColor();
+		}
+		else {
+			c = intersection.second.second->getSurfaceColor();
+		}
+		return c*((rho*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
 	}
 	else {
 		//recursive call
@@ -370,7 +371,7 @@ color camera::castRay(ray &r, int depth) {
 			}
 			color dirLight = { lightHits, lightHits, lightHits };
 
-			color finC = rho * ( ( (double)LIGHTWATT * dirLight / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + (finalColor)) * c;
+			color finC = rho * ( ( (double)LIGHTWATT * dirLight / ( (double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + (finalColor)) * c;
 			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
@@ -410,32 +411,39 @@ void multi(camera *c, int dims[4], int thr) {
 	const float pixelHeight = 2.0 / c->getHeight();
 	const float deltaPW = pixelWidth / 2.0;
 	const float deltaPH = pixelHeight / 2.0;
+	int MAX = 1;
 
 	for (int i = dims[0]; i < dims[2]; ++i) {
 		for (int j = dims[1]; j < dims[3]; ++j) {
-			float y = (1.0 - i * pixelWidth) - deltaPW;
-			float z = (j * pixelHeight - 1.0) + deltaPH;
-			float x = 0.0;
 
-			vertex s = vertex(c->getCurrentEye()->x, c->getCurrentEye()->y, c->getCurrentEye()->z, 1.0);
-			vertex e = vertex(x, y, z, 1.0);
+			color col(0.0);
+			for (int num = 0; num < MAX; ++num)
+			{
+				float newDeltaPW = pixelWidth * c->distribution(c->generator);
+				float newDeltaPH = pixelHeight * c->distribution(c->generator);
+				float y = (1.0 - i * pixelWidth) - newDeltaPW;
+				float z = (j * pixelHeight - 1.0) + newDeltaPH;
+				float x = 0.0;
 
-			//Create ray between eye and pixelplane
-			ray r = ray(s, e);
-			r.setImportance(1.0);
+				vertex s = vertex(c->getCurrentEye()->x, c->getCurrentEye()->y, c->getCurrentEye()->z, 1.0);
+				vertex e = vertex(x, y, z, 1.0);
 
-			//cast
-			color col;
-			col = c->castRay(r, 0);
+				//Create ray between eye and pixelplane
+				ray r = ray(s, e);
+				r.setImportance(1.0);
 
+				//cast
+				
+				col += c->castRay(r, 0);
+			}
+			col /= (double)MAX;
 			c->addIntensity(col, thr);
 
 			double m = std::max(std::max(col.x, col.y), col.z);
-			if (m > c->getBrightest(thr)  && m < LIGHTWATT / (2.0 * PI)) //ASUMES WHITE COLORED LIGHT
+			if (m > c->getBrightest(thr))  //&& m < LIGHTWATT / (2.0 * PI)) //ASUMES WHITE COLORED LIGHT
 				c->setBrightest(m,thr);
 
 			c->setNewMaxIntensity(col, thr);
-
 			c->setPixelValue(col,i,j);
 		}
 		
@@ -454,9 +462,9 @@ void multi(camera *c, int dims[4], int thr) {
 	}
 }
 
-double camera::sigMoidNormalize(double pixVal, double range, double beta)
+double camera::sigMoidNormalize(double pixVal, double alpha, double beta)
 {
-	double res = 1.0 / ( 1.0 + std::exp(-((pixVal - beta) / range)) );
+	double res = 1.0 / ( 1.0 + std::exp(-((pixVal - beta) / alpha)) );
 	return res;
 }
 
@@ -472,8 +480,12 @@ void camera::render() {
 	if (MODE == SINGLE_THREAD) {
 		for (int i = 0; i < width; i++) {		
 			for (int j = 0; j < height; ++j) {
-				float y = (1.0 - i * pixelWidth) - deltaPW;
-				float z = (j * pixelHeight - 1.0) + deltaPH;
+				 
+
+				float newDeltaPW = pixelWidth * distribution(generator);
+				float newDeltaPH = pixelHeight * distribution(generator);
+				float y = (1.0 - i * pixelWidth) - newDeltaPW;
+				float z = (j * pixelHeight - 1.0) + newDeltaPH;
 				float x = 0.0;
 
 				vertex s = vertex(currentEye->x, currentEye->y, currentEye->z, 1.0);
@@ -498,7 +510,7 @@ void camera::render() {
 			clearConsole();
 			printContext();
 			std::cout << "Progress: " << (i + 1) << " of " << width << " rows complete" << std::endl;
-		}
+		 }
 	}
 	else if (MODE == MULTI_THREAD) {
 
@@ -549,12 +561,12 @@ void camera::render() {
 		for (int x = 0; x < width; x++) {
 
 			
-			//double sigmoidX = std::pow(sigMoidNormalize(image[x][y].getIntensity().x, range.x, range.x / 2.0) ,1.0);
-			//double sigmoidY = std::pow(sigMoidNormalize(image[x][y].getIntensity().y, range.y, range.y / 2.0), 1.0);
-			//double sigmoidZ = std::pow(sigMoidNormalize(image[x][y].getIntensity().z, range.z, range.z / 2.0), 1.0);
-			fputc(std::pow(std::min((image[x][y].getIntensity().x / bMax), 1.0), 0.5) * 255, f);   // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().y / bMax), 1.0), 0.5) * 255, f); // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().z / bMax), 1.0), 0.5) * 255, f);  // 0 .. 255
+			//double sigmoidX = std::pow(sigMoidNormalize(image[x][y].getIntensity().x, rangeMAX, rangeMAX / 2.0) ,1.0);
+			//double sigmoidY = std::pow(sigMoidNormalize(image[x][y].getIntensity().y, rangeMAX, rangeMAX / 2.0), 1.0);
+			//double sigmoidZ = std::pow(sigMoidNormalize(image[x][y].getIntensity().z, rangeMAX, rangeMAX / 2.0), 1.0);
+			fputc(std::pow(std::min((image[x][y].getIntensity().x / rangeMAX), 1.0), 0.5) * 255, f);   // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().y / rangeMAX), 1.0), 0.5) * 255, f); // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().z / rangeMAX), 1.0), 0.5) * 255, f);  // 0 .. 255
 
 
 			//fputc(sigmoidX * 255, f);   // 0 .. 255
