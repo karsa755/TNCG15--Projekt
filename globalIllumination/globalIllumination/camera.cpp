@@ -189,6 +189,10 @@ glm::vec3 sampleHemisphere(const float &cosTheta, const float &sidPhi) {
 	//float z = sinTheta * sinf(phi);
 	//float x = (sinTheta * cosf(phi));
 	//return glm::vec3(x, cosTheta, z);
+
+	//float z = sinTheta * sinf(phi);
+	//float y = (sinTheta * cosf(phi));
+	//return glm::vec3(cosTheta, y, z);
 }
 
 
@@ -248,11 +252,11 @@ color camera::castRay(ray &r, int depth) {
 	double rho;
 	if (intersection.second.first->isImplicit())
 	{
-		rho = intersection.second.first->getRho();
+		rho = intersection.second.first->getRho() / PI;
 	}
 	else
 	{
-		rho = intersection.second.second->getRho();
+		rho = intersection.second.second->getRho() / PI;
 	}
 
 	for (int i = 0; i < SHADOWRAYS; ++i)
@@ -280,11 +284,13 @@ color camera::castRay(ray &r, int depth) {
 		//std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
 
-		return ret*LIGHTWATT / (2.0 * PI);
+		return ret*LIGHTWATT / (2.0 * PI * AREA);
 	}
-	
-	
-	if (depth >= MAXDEPTH ) {
+
+	//float russianRoulette = distribution(generator);
+
+		if(depth >= MAXDEPTH) {
+		//if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) {
 		//shadow rays n' stuff
 		color dirLight = { 1.0, 1.0, 1.0 };
 
@@ -313,7 +319,7 @@ color camera::castRay(ray &r, int depth) {
 		else {
 			c = intersection.second.second->getSurfaceColor();
 		}
-		return c*((rho*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
+		return c*(((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
 	}
 	else {
 		//recursive call
@@ -345,7 +351,7 @@ color camera::castRay(ray &r, int depth) {
 		if (intersection.second.first->getSurfProperty() == DIFFUSE)
 		{
 			//std::cout << "D" << std::endl;
-			double PDF = 1.0 / (2.0*PI);
+			double PDF = 1.0 / (2.0 * PI);
 			
 			for (int n = 0; n < N; ++n) {
 				float cosTheta = distribution(generator);
@@ -357,9 +363,10 @@ color camera::castRay(ray &r, int depth) {
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
 				outRay.setImportance(r.getImportance() * cosTheta);
-				finalColor += (double)cosTheta * castRay(outRay, depth + 1) / PDF; //WTF Why not Divide with pdf?
+				finalColor += (double)cosTheta * castRay(outRay, depth + 1); //WTF Why not Divide with pdf?
 			}
-			finalColor /= (double)N;
+			
+			finalColor /= ((double)N * PDF);
 			//finalColor *= rho;
 			color c;
 
@@ -405,19 +412,29 @@ color camera::castRay(ray &r, int depth) {
 	
 }
 
+void camera::setInitRay(int ray)
+{
+	initRAY = ray;
+}
+
+int camera::getInitRay()
+{
+	return initRAY;
+}
+
 
 void multi(camera *c, int dims[4], int thr) {
 	const float pixelWidth = 2.0 / c->getWidht();
 	const float pixelHeight = 2.0 / c->getHeight();
 	const float deltaPW = pixelWidth / 2.0;
 	const float deltaPH = pixelHeight / 2.0;
-	int MAX = 1;
+	
 
 	for (int i = dims[0]; i < dims[2]; ++i) {
 		for (int j = dims[1]; j < dims[3]; ++j) {
 
 			color col(0.0);
-			for (int num = 0; num < MAX; ++num)
+			for (int num = 0; num < c->getInitRay(); ++num)
 			{
 				float newDeltaPW = pixelWidth * c->distribution(c->generator);
 				float newDeltaPH = pixelHeight * c->distribution(c->generator);
@@ -436,7 +453,7 @@ void multi(camera *c, int dims[4], int thr) {
 				
 				col += c->castRay(r, 0);
 			}
-			col /= (double)MAX;
+			col /= (double)c->getInitRay();
 			c->addIntensity(col, thr);
 
 			double m = std::max(std::max(col.x, col.y), col.z);
@@ -550,7 +567,10 @@ void camera::render() {
 	//bMax = (bMax + LIGHTWATT) / 2.0;
 	//bMax = LIGHTWATT;
 	//bMax = 1.0;
-	
+	if (rangeMAX < 1.0)
+	{
+		//rangeMAX = 1.0;
+	}
 	std::cout << "Trying whatever normalizer for light..." << std::endl;
 	std::cout << rangeMAX << " " << bMax << std::endl;
 	

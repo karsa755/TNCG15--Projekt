@@ -4,7 +4,6 @@
 #include <random>
 #include <chrono>
 #include <thread>
-#include <stack>
 #include <Windows.h>
 
 #include "definition.h"
@@ -44,7 +43,8 @@ public:
 	void setNewMaxIntensity(glm::dvec3 val, int th);
 	std::pair<glm::vec3, std::pair<object*, triangle*>> findClosestIntersection(ray &r);
 	color castRay(ray &r, int depth);
-
+	void setInitRay(int ray);
+	int getInitRay();
 	void render();
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution;
@@ -70,6 +70,7 @@ private:
 	int FACTOR = 1;
 	int SHADOWRAYS = 1;
 	int MAXDEPTH = 1;
+	int initRAY = 1;
 
 	int MODE = SINGLE_THREAD;
 
