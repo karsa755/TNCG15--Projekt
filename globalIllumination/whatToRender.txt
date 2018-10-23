@@ -1,56 +1,19 @@
-//Check intersections
-			//std::vector<std::pair<glm::vec3, triangle*>> intersections;
-			std::vector<std::pair<glm::vec3, std::pair<object* , triangle* >>> intersections;
-			std::pair<glm::vec3, triangle*> tr;
-			std::pair<glm::vec3, std::pair<object*, triangle* >> finalBoss;
-			for (auto it = begin(objects); it != end(objects); ++it) {
-				tr = (*it)->rayIntersect(r);
-				finalBoss.first = tr.first;
-				finalBoss.second.second = tr.second;
-				finalBoss.second.first = *it;
-				if (tr.second != nullptr) {
-					intersections.push_back(finalBoss);
-				}
-				else
-				{
-					if ((*it)->isImplicit() && finalBoss.first != glm::vec3(-1.0f))
-					{
-						intersections.push_back(finalBoss);
 
-					}
-				}
-			}
+800x800
+Standard: Russian roulette (depth 20, 20% chans), branch factor=8, shadow rays = 4, initRay = 4. //Adam
 
-			//we have all intersections, find the closest
-			auto it = begin(intersections);
-			if (it != end(intersections)) {
-				finalBoss = *it;
-				++it;
-				for (; it != end(intersections); ++it) {
-					if (it->first.x < finalBoss.first.x) {
-						finalBoss = *it;
-					}
-				}
+depth: 1, 3, 4, russian roulette //Karim
 
-				//shoud do stuff with ray...
+branch factor: 1, 4, 8 // adam
+
+shadowRays: 1, 2, 4 //Karim
+
+initRay: 2,3,4, middle //adam
 
 
-				//set image color
-				if (finalBoss.second.second != nullptr)
-				{
-					color c = finalBoss.second.second->getSurfaceColor();
-					image[i][j].setIntensity(c);
-				}
-				else
-				{
-					glm::vec3 normal = (tr.first - finalBoss.second.first->getPosition()) / finalBoss.second.first->getRadius();
-					color c = finalBoss.second.first->getColor();
-					image[i][j].setIntensity(c);
-				}
-			}
-			else {
-				std::cout << "Error, No collision...." << std::endl;
-				color c = color(0.0, 0.0, 0.0);
-				image[i][j].setIntensity(c);
-				++debugCounter;
-			}
+//////behöver inte ha till rapporten///
+ULTIMAT BILD:
+2000x2000, russian roulette, branch factor 16, shadow rays 8, initRay 4.
+
+skriv ner tiden det tar och vilka specs för varje bild!!!!!
+skriv även vilken dator det var!!!

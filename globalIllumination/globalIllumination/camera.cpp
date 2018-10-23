@@ -287,10 +287,10 @@ color camera::castRay(ray &r, int depth) {
 		return ret*LIGHTWATT / (2.0 * PI * AREA);
 	}
 
-	//float russianRoulette = distribution(generator);
+		float russianRoulette = distribution(generator);
 
-		if(depth >= MAXDEPTH) {
-		//if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) {
+		//if(depth >= MAXDEPTH) {
+		if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
 		//shadow rays n' stuff
 		color dirLight = { 1.0, 1.0, 1.0 };
 		glm::vec3 normal = intersection.second.first->isImplicit() ?
@@ -388,7 +388,7 @@ color camera::castRay(ray &r, int depth) {
 			float addExtra = 0.0f;
 			while(glm::distance(intersection.first + (glm::vec3)reflectDir*addExtra, intersection.second.first->getPosition()) <  intersection.second.first->getRadius())
 			{
-				addExtra += 0.1f;	
+				addExtra += 0.2f;	
 			}
 		
 			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 5.0f, 1.0f);
