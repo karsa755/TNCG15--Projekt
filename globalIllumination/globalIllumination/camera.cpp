@@ -293,7 +293,6 @@ color camera::castRay(ray &r, int depth) {
 		//if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) {
 		//shadow rays n' stuff
 		color dirLight = { 1.0, 1.0, 1.0 };
-
 		glm::vec3 normal = intersection.second.first->isImplicit() ?
 			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
 			: intersection.second.second->getNormal();
@@ -457,7 +456,7 @@ void multi(camera *c, int dims[4], int thr) {
 			c->addIntensity(col, thr);
 
 			double m = std::max(std::max(col.x, col.y), col.z);
-			if (m > c->getBrightest(thr))  //&& m < LIGHTWATT / (2.0 * PI)) //ASUMES WHITE COLORED LIGHT
+			if (m > c->getBrightest(thr) && m < LIGHTWATT / (2.0 * PI)) //ASUMES WHITE COLORED LIGHT
 				c->setBrightest(m,thr);
 
 			c->setNewMaxIntensity(col, thr);
@@ -584,9 +583,9 @@ void camera::render() {
 			//double sigmoidX = std::pow(sigMoidNormalize(image[x][y].getIntensity().x, rangeMAX, rangeMAX / 2.0) ,1.0);
 			//double sigmoidY = std::pow(sigMoidNormalize(image[x][y].getIntensity().y, rangeMAX, rangeMAX / 2.0), 1.0);
 			//double sigmoidZ = std::pow(sigMoidNormalize(image[x][y].getIntensity().z, rangeMAX, rangeMAX / 2.0), 1.0);
-			fputc(std::pow(std::min((image[x][y].getIntensity().x / rangeMAX), 1.0), 0.5) * 255, f);   // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().y / rangeMAX), 1.0), 0.5) * 255, f); // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().z / rangeMAX), 1.0), 0.5) * 255, f);  // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().x), 1.0), 0.5) * 255, f);   // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().y), 1.0), 0.5) * 255, f); // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().z), 1.0), 0.5) * 255, f);  // 0 .. 255
 
 
 			//fputc(sigmoidX * 255, f);   // 0 .. 255
