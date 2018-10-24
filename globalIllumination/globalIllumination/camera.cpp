@@ -213,7 +213,8 @@ std::pair<glm::vec3, std::pair<object*, triangle*>> camera::findClosestIntersect
 			intersections.push_back(intersectionObject);
 		}
 		else {
-			if ((*it)->isImplicit() && intersectionObject.first != glm::vec3(-1.0f)) {
+			if ((*it)->isImplicit() && intersectionObject.first.x < MAX_FLOAT / 2.0f
+				&& intersectionObject.first.y < MAX_FLOAT / 2.0f && intersectionObject.first.z < MAX_FLOAT / 2.0f) {
 				intersections.push_back(intersectionObject);
 			}
 		}
@@ -297,7 +298,7 @@ color camera::castRay(ray &r, int depth) {
 			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
 			: intersection.second.second->getNormal();
 		
-		vertex startPoint = { intersection.first + (normal * 0.001f),1.0f };
+		vertex startPoint = { intersection.first + (normal * 0.1f),1.0f };
 		double lightHits = 0.0;
 		for (int i = 0; i < SHADOWRAYS; ++i)
 		{
@@ -307,7 +308,7 @@ color camera::castRay(ray &r, int depth) {
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
 
-				lightHits += (1.0 * (double)std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(((double)glm::distance(intersection.first, closest.first)), 2.0);
+				lightHits += (1.0 * (double)std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow( std::max(1.0,(double)glm::distance(intersection.first, closest.first)) , 2.0);
 			}
 		}
 		color c;
@@ -343,7 +344,8 @@ color camera::castRay(ray &r, int depth) {
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				lightHits += ( 1.0 * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(((double)glm::distance(intersection.first, closest.first)), 2.0);
+				
+				lightHits += ( 1.0 * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
 			}
 		}
 		
@@ -382,22 +384,16 @@ color camera::castRay(ray &r, int depth) {
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
+			glm::vec3 pseudoDir = glm::normalize(intersection.first - glm::vec3(r.getStartVec()));
 			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
 			dir.w = 1.0f;
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-			float addExtra = 0.0f;
-			while(glm::distance(intersection.first + (glm::vec3)reflectDir*addExtra, intersection.second.first->getPosition()) <  intersection.second.first->getRadius())
-			{
-				addExtra += 0.2f;	
-			}
 		
-			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 5.0f, 1.0f);
-			//vertex startPt  = r.getEndVec();
+			vertex startPt = vertex(intersection.first + (glm::vec3)Z * 0.1f, 1.0f);
+		
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
 			ray rMirror(startPt, endPt);
-			//std::cout << "x is: " << intersection.first.x << ", y is: " << intersection.first.y <<
-			//	", z is: " << intersection.first.z << std::endl;
 			return castRay(rMirror, depth);
 		}
 		else

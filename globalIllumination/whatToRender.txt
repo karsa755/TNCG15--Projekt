@@ -1,10 +1,10 @@
 
 800x800
-Standard: Russian roulette (depth 20, 20% chans), branch factor=4, shadow rays = 4, initRay = 4. //Adam
+Standard: Russian roulette (depth 20, 20% chans), branch factor=2, shadow rays = 4, initRay = 2. //Adam
 
 depth: 1, 2, russian roulette //Karim
 
-branch factor: 1, 4, 8 // adam
+branch factor: 1, 2,4  // adam
 
 shadowRays: 1, 2, 4 //Karim
 
