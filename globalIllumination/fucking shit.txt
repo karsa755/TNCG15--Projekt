@@ -1,0 +1,9 @@
+Crashar pga nullptr (utanför scenen, inga hits)
+
+camera.cpp: 358
+
+Intersection med gula väggen
+cosTheta ~= 0.0 (1....*10^-6)
+sampleHemisphere returns vector (+,-,-)
+worldSample returns vector (0.418, -0.245, -0.874), vilken makes no sense.
+intersection.first + worldSample*0.1f trycker oss utanför väggen
