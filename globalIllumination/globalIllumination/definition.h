@@ -11,7 +11,7 @@
 #define REFRACT 3
 #define MIRROR 4
 #define PI 3.14159265359
-#define LIGHTWATT 80.0
+#define LIGHTWATT 120.0
 #define AREA 1.0 //Roof
 //#define AREA 4.611 //Tetra
 #define eps std::numeric_limits<float>::epsilon()
