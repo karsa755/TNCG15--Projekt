@@ -20,7 +20,7 @@ public:
 	void switchEye(glm::vec3 & e);
 	triangle getLightSource();
 	void getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::vec3 &X, glm::vec3 &Y);
-	glm::vec3 localToWorld(const glm::vec3 &X, const glm::vec3 &Y, const glm::vec3 &Z, const glm::vec3 & v);
+	glm::vec3 localToWorld(const glm::vec3 &X, const glm::vec3 &Y, const glm::vec3 &Z, const glm::vec3 & v, const glm::vec3 &t);
 	glm::vec3 worldToLocal(const glm::vec3 &X, const glm::vec3 &Y, const glm::vec3 &Z, const glm::vec3 & v);
 	void setBranchFactor(int f);
 	void setShadowRays(int n);
@@ -51,8 +51,8 @@ public:
 
 private:
 	void findLightSource();
-	const static int width = 800;
-	const static int height = 800;
+	const static int width = 200;
+	const static int height = 200;
 	const glm::vec3 * currentEye;
 	const glm::vec3 position = glm::vec3(0.0,0.0,0.0);
 	const glm::vec3 eye1 = glm::vec3(-2.0,0.0,0.0);

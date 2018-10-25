@@ -13,8 +13,8 @@ polyModel createScene()
 	vertex floorVertices[6];
 	vertex lightVerts[3];
 	std::vector<triangle> sceneList;
-	double wallRho = 0.8;
-	double lightWallRho = 0.3;
+	double wallRho = 1.0;
+	double lightWallRho = 0.1;
 	double maxRho = 1.0;
 	roofVertices[0] = vertex(0.0f, 6.0f, 5.0f, 1.0f);
 	roofVertices[1] = vertex(-3.0f, 0.0f, 5.0f, 1.0f);
@@ -30,11 +30,11 @@ polyModel createScene()
 	floorVertices[4] = vertex(13.0f, 0.0f, -5.0f, 1.0f);
 	floorVertices[5] = vertex(10.0f, -6.0f, -5.0f, 1.0f);
 	//roof triangles
-	lightVerts[0] = vertex(5.5f, 0.0f, 4.0f, 1.0f);
-	lightVerts[1] = vertex(4.5f, 1.0f, 4.0f, 1.0f);
-	lightVerts[2] = vertex(4.5f, -1.0f, 4.0f, 1.0f);
+	lightVerts[0] = vertex(5.5f, 0.0f, 4.25f, 1.0f);
+	lightVerts[1] = vertex(4.5f, 1.0f, 4.25f, 1.0f);
+	lightVerts[2] = vertex(4.5f, -1.0f, 4.25f, 1.0f);
 	//light source
-	sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(1.0, 1.0, 1.0), true));
+	sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(0.0, 0.0, 0.0), true));
 
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[2], roofVertices[1], maxRho,color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[5], roofVertices[2], maxRho, color(1.0, 1.0, 1.0)));
@@ -46,8 +46,8 @@ polyModel createScene()
 	sceneList.push_back(triangle(floorVertices[0], floorVertices[5], floorVertices[3], maxRho, color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(floorVertices[3], floorVertices[5], floorVertices[4], maxRho, color(1.0, 1.0, 1.0)));
 	//wall 1, red
-	sceneList.push_back(triangle(roofVertices[1], floorVertices[2], floorVertices[1], lightWallRho, color(1.0, 0.0, 0.0)));
-	sceneList.push_back(triangle(floorVertices[2], roofVertices[1], roofVertices[2], lightWallRho, color(1.0, 0.0, 0.0)));
+	sceneList.push_back(triangle(roofVertices[1], floorVertices[2], floorVertices[1], lightWallRho, color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(floorVertices[2], roofVertices[1], roofVertices[2], lightWallRho, color(1.0, 1.0, 1.0)));
 	//wall 2, blue
 	sceneList.push_back(triangle(floorVertices[5], floorVertices[2], roofVertices[5], wallRho,  color(0.0, 0.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[2], roofVertices[5], floorVertices[2], wallRho,  color(0.0, 0.0, 1.0)));
@@ -61,8 +61,8 @@ polyModel createScene()
 	sceneList.push_back(triangle(roofVertices[0], floorVertices[0], floorVertices[3], wallRho,  color(1.0, 0.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[0], floorVertices[3], roofVertices[3], wallRho, color(1.0, 0.0, 1.0)));
 	//wall 6
-	sceneList.push_back(triangle(roofVertices[0], floorVertices[1], floorVertices[0], lightWallRho, color(0.0, 1.0, 1.0)));
-	sceneList.push_back(triangle(roofVertices[1], floorVertices[1], roofVertices[0], lightWallRho, color(0.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(roofVertices[0], floorVertices[1], floorVertices[0], lightWallRho, color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(roofVertices[1], floorVertices[1], roofVertices[0], lightWallRho, color(1.0, 1.0, 1.0)));
 
 	polyModel scene(sceneList, glm::vec3(0.0, 0.0, 0.0), DIFFUSE, 1.0);
 	return scene;
@@ -112,8 +112,8 @@ int main(int, char*[])
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setBranchFactor(1);
 	cam->setShadowRays(1);
-	cam->setDepth(20);
-	cam->setInitRay(1);
+	cam->setDepth(20); 
+	cam->setInitRay(4);
 	
 
 

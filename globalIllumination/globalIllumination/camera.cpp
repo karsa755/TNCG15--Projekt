@@ -2,7 +2,7 @@
 
 
 
-camera::camera(std::vector<object*> ol) //: generator(std::chrono::system_clock::now().time_since_epoch().count())
+camera::camera(std::vector<object*> ol) : generator(std::chrono::system_clock::now().time_since_epoch().count())
 {
 	currentEye = &eye2;
 	objects = ol;
@@ -47,10 +47,34 @@ void camera::getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::ve
 	Y = glm::cross(-X,Z);
 }
 
-glm::vec3 camera::localToWorld(const glm::vec3 & X, const glm::vec3 & Y, const glm::vec3 & Z, const glm::vec3 & v)
+glm::vec3 camera::localToWorld(const glm::vec3 & X, const glm::vec3 & Y, const glm::vec3 & Z, const glm::vec3 & v, const glm::vec3 &t)
 {
-	glm::vec3 out = {X.x*v.x + Y.x*v.y + Z.x*v.z, X.y*v.x + Y.y*v.y + Z.y*v.z, X.z*v.x + Y.z*v.y + Z.z*v.z};
-	return out;
+
+	glm::mat4 Mrot(1.0f);
+	glm::mat4 Mtrans(1.0f);
+	Mrot[0][0] = X.x;
+	Mrot[1][0] = X.y;
+	Mrot[2][0] = X.z;
+	Mrot[3][0] = 0.0f;
+	Mrot[0][1] = Y.x;
+	Mrot[1][1] = Y.y;
+	Mrot[2][1] = Y.z;
+	Mrot[3][1] = 0.0f;
+	Mrot[0][2] = Z.x;
+	Mrot[1][2] = Z.y;
+	Mrot[2][2] = Z.z;
+	Mrot[3][2] = 0.0f;
+	Mrot[0][3] = 0.0f;
+	Mrot[1][3] = 0.0f;
+	Mrot[2][3] = 0.0f;
+	Mrot[3][3] = 1.0f;
+
+	Mtrans[0][3] = -t.x;
+	Mtrans[1][3] = -t.y;
+	Mtrans[2][3] = -t.z;
+	glm::mat4 M = Mrot * Mtrans;
+	glm::mat4 Minv = glm::inverse(M);
+	return (glm::vec3)(Minv * glm::vec4(v, 1.0f));
 }
 
 glm::vec3 camera::worldToLocal(const glm::vec3 & X, const glm::vec3 & Y, const glm::vec3 & Z, const glm::vec3 & v)
@@ -182,17 +206,9 @@ void camera::setNewMaxIntensity(glm::dvec3 val, int th)
 glm::vec3 sampleHemisphere(const float &cosTheta, const float &sidPhi) {
 	float sinTheta = sqrtf(1.0 - cosTheta * cosTheta);
 	float phi = 2.0 * PI * sidPhi;
-	float x = sinTheta * sinf(phi);
-	float y = -(sinTheta * cosf(phi));
-	return glm::vec3(x,y,-cosTheta);
-
-	//float z = sinTheta * sinf(phi);
-	//float x = (sinTheta * cosf(phi));
-	//return glm::vec3(x, cosTheta, z);
-
-	//float z = sinTheta * sinf(phi);
-	//float y = (sinTheta * cosf(phi));
-	//return glm::vec3(cosTheta, y, z);
+	float x = sinTheta * cosf(phi);
+	float y = sinTheta * sinf(phi);
+	return glm::vec3(x,y, cosTheta);
 }
 
 
@@ -248,8 +264,8 @@ color camera::castRay(ray &r, int depth) {
 
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
-	vertex midPoint = lightSource.getMidPoint();
 	std::vector<glm::vec3> lightSamples;
+	int N = FACTOR;
 	double rho;
 	if (intersection.second.first->isImplicit())
 	{
@@ -262,17 +278,9 @@ color camera::castRay(ray &r, int depth) {
 
 	for (int i = 0; i < SHADOWRAYS; ++i)
 	{
-		if (i == 0)
-		{
-			lightSamples.emplace_back(midPoint);
-		}
-		else
-		{
-			float u = distribution(generator);
-			float v = (1 - u) * distribution(generator);
-			lightSamples.emplace_back(lightSource.sampleTriangle(u, v));
-		}
-
+		float u = distribution(generator);
+		float v = (1 - u) * distribution(generator);
+		lightSamples.emplace_back(lightSource.sampleTriangle(u, v));
 	}
 
 	if (intersection.second.first == nullptr) {
@@ -284,7 +292,8 @@ color camera::castRay(ray &r, int depth) {
 		//hitting light source
 		//std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
-
+		if (depth == 0) return color(1.0, 1.0, 1.0) * LIGHTWATT / (2.0 * PI * AREA); // if first bounce		
+		
 		return ret*LIGHTWATT / (2.0 * PI * AREA);
 	}
 
@@ -298,7 +307,7 @@ color camera::castRay(ray &r, int depth) {
 			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
 			: intersection.second.second->getNormal();
 		
-		vertex startPoint = { intersection.first + (normal * 0.1f),1.0f };
+		vertex startPoint = { intersection.first + (normal * 0.01f),1.0f };
 		double lightHits = 0.0;
 		for (int i = 0; i < SHADOWRAYS; ++i)
 		{
@@ -308,7 +317,9 @@ color camera::castRay(ray &r, int depth) {
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
 
-				lightHits += (1.0 * (double)std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow( std::max(1.0,(double)glm::distance(intersection.first, closest.first)) , 2.0);
+				lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i)))) 
+							* std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) 
+							/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
 			}
 		}
 		color c;
@@ -323,10 +334,9 @@ color camera::castRay(ray &r, int depth) {
 	}
 	else {
 		//recursive call
-		int N = FACTOR;
-		glm::vec3 X;
-		glm::vec3 Y;
-		glm::vec3 I = intersection.first - (glm::vec3)r.getStartVec();
+		glm::vec3 X(0.0f);
+		glm::vec3 Y(0.0f);
+		glm::vec3 I = ((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
 		glm::vec3 Z = intersection.second.first->isImplicit() ? 
 								((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius()) 
 								: intersection.second.second->getNormal();
@@ -334,7 +344,7 @@ color camera::castRay(ray &r, int depth) {
 		getLocalCoordSystem(Z,I,X,Y);
 
 		color finalColor(0.0, 0.0, 0.0);
-		vertex startPoint = { intersection.first + (Z * 0.001f),1.0f };
+		vertex startPoint = { intersection.first + (Z * 0.01f),1.0f };
 
 		double lightHits = 0.0;
 		for (int i = 0; i < SHADOWRAYS; ++i)
@@ -345,7 +355,9 @@ color camera::castRay(ray &r, int depth) {
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
 				
-				lightHits += ( 1.0 * std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) / std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
+				lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i)))) 
+							* std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) 
+							/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
 			}
 		}
 		
@@ -358,9 +370,12 @@ color camera::castRay(ray &r, int depth) {
 				float cosTheta = distribution(generator);
 				float sidPhi = distribution(generator);
 				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
+				
+				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
 
-				glm::vec3 worldSample = localToWorld(X, Y, Z, sample);
-				vertex v1 = vertex(intersection.first + worldSample * 0.1f, 1.0f);
+				glm::vec3 directionWorld = glm::normalize(worldSample - intersection.first);
+
+				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
 				outRay.setImportance(r.getImportance() * cosTheta);
@@ -379,7 +394,7 @@ color camera::castRay(ray &r, int depth) {
 			}
 			color dirLight = { lightHits, lightHits, lightHits };
 
-			color finC = rho * ( ( (double)LIGHTWATT * dirLight / ( (double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + (finalColor)) * c;
+			color finC = rho * ( ( ((double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + finalColor ) * c;
 			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
@@ -390,7 +405,8 @@ color camera::castRay(ray &r, int depth) {
 			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
 		
 			vertex startPt = vertex(intersection.first + (glm::vec3)Z * 0.1f, 1.0f);
-		
+			//vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 5.0f, 1.0f);
+
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
 			ray rMirror(startPt, endPt);
@@ -452,7 +468,7 @@ void multi(camera *c, int dims[4], int thr) {
 			c->addIntensity(col, thr);
 
 			double m = std::max(std::max(col.x, col.y), col.z);
-			if (m > c->getBrightest(thr) && m < LIGHTWATT / (2.0 * PI)) //ASUMES WHITE COLORED LIGHT
+			if (m > c->getBrightest(thr) && m < LIGHTWATT / (4.0 * PI * AREA)) //ASUMES WHITE COLORED LIGHT
 				c->setBrightest(m,thr);
 
 			c->setNewMaxIntensity(col, thr);

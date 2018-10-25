@@ -26,31 +26,27 @@ std::pair<glm::vec3, triangle*> triangle::rayIntersection(ray &r)
 	glm::vec3 T = start - v0;
 	glm::vec3 E1 = v1 - v0;
 	glm::vec3 E2 = v2 - v0;
-	glm::vec3 D = end - start;
+	glm::vec3 D = glm::normalize(end - start);
 	glm::vec3 P = glm::cross(D, E2);
 	glm::vec3 Q = glm::cross(T, E1);
-
+	glm::vec2 res;
 	float constant = 1.0f / (glm::dot(P, E1));
 	glm::vec3 result = constant * glm::vec3(glm::dot(Q, E2), glm::dot(P, T), glm::dot(Q, D));
 
 	if (result.y < (0.0f-eps) || result.z < (0.0f-eps) || (result.y + result.z) > (1.0f+eps))
 	{
-		//return "nollvektor" if there is no intersection
-		//return glm::vec3(-1.0, -1.0, -1.0);
 		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0f), nullptr);
 	}
-	if (result.x > 0.0f)
+	if (result.x > eps)
 	{
+		
 		glm::vec3 rayStart = glm::vec3(start.x, start.y, start.z);
-		//there is an intersection
-		//return rayStart + D * result.x;
 		return std::pair<glm::vec3, triangle*>(rayStart + D * result.x, this);
 	}
 	else
 	{
 		return std::pair<glm::vec3, triangle*>(glm::vec3(-1.0f), nullptr);
-	}
-	
+	}	
 }
 
 color triangle::getSurfaceColor() {
