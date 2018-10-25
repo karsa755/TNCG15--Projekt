@@ -4,7 +4,7 @@ Standard: Russian roulette (depth 20, 20% chans), branch factor=2, shadow rays =
 
 depth: 1, 2, russian roulette //Karim
 
-branch factor: 1, 2,4  // adam
+branch factor: 1, 2, 4  // adam
 
 shadowRays: 1, 2, 4 //Karim
 

@@ -45,6 +45,7 @@ std::pair<glm::vec3, triangle*> implicitModel::rayIntersect(ray & r)
 	if (intersect)
 	{
 		tr.first = point;
+		tr.second = r.bogusTriangle;
 		return tr;
 	}
 	else

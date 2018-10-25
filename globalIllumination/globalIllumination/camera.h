@@ -49,6 +49,8 @@ public:
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution;
 
+	triangle* bogusTriangle = new triangle();
+
 private:
 	void findLightSource();
 	const static int width = 800;

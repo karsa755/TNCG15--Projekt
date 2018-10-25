@@ -15,6 +15,8 @@ public:
 	double getImportance();
 	void setImportance(double imp);
 
+	triangle *bogusTriangle;
+
 private:
 	vertex start, end;
 	color rayColor;

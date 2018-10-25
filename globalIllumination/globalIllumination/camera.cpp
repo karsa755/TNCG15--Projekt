@@ -213,8 +213,7 @@ std::pair<glm::vec3, std::pair<object*, triangle*>> camera::findClosestIntersect
 			intersections.push_back(intersectionObject);
 		}
 		else {
-			if ((*it)->isImplicit() && intersectionObject.first.x < MAX_FLOAT / 2.0f
-				&& intersectionObject.first.y < MAX_FLOAT / 2.0f && intersectionObject.first.z < MAX_FLOAT / 2.0f) {
+			if ((*it)->isImplicit() && intersectionObject.second.second == r.bogusTriangle) {
 				intersections.push_back(intersectionObject);
 			}
 		}
@@ -304,6 +303,7 @@ color camera::castRay(ray &r, int depth) {
 		{
 			vertex n = vertex(lightSamples.at(i), 1.0f);
 			ray toLight(startPoint, n);
+			toLight.bogusTriangle = bogusTriangle;
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
@@ -341,6 +341,7 @@ color camera::castRay(ray &r, int depth) {
 		{
 			vertex n = vertex(lightSamples.at(i), 1.0f);
 			ray toLight(startPoint, n);
+			toLight.bogusTriangle = bogusTriangle;
 
 			auto closest = findClosestIntersection(toLight);
 			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
@@ -363,7 +364,9 @@ color camera::castRay(ray &r, int depth) {
 				vertex v1 = vertex(intersection.first + worldSample * 0.1f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
+				outRay.bogusTriangle = bogusTriangle;
 				outRay.setImportance(r.getImportance() * cosTheta);
+				
 				finalColor += (double)cosTheta * castRay(outRay, depth + 1); //WTF Why not Divide with pdf?
 			}
 			
@@ -394,6 +397,7 @@ color camera::castRay(ray &r, int depth) {
 
 			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
 			ray rMirror(startPt, endPt);
+			rMirror.bogusTriangle = bogusTriangle;
 			return castRay(rMirror, depth);
 		}
 		else
@@ -442,6 +446,7 @@ void multi(camera *c, int dims[4], int thr) {
 
 				//Create ray between eye and pixelplane
 				ray r = ray(s, e);
+				r.bogusTriangle = c->bogusTriangle;
 				r.setImportance(1.0);
 
 				//cast
@@ -505,6 +510,7 @@ void camera::render() {
 
 				//Create ray between eye and pixelplane
 				ray r = ray(s, e);
+				r.bogusTriangle = bogusTriangle;
 				r.setImportance(1.0);
 
 				//cast
