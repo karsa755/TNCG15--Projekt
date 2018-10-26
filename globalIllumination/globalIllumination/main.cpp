@@ -99,7 +99,7 @@ int main(int, char*[])
 
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
-	implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), MIRROR, 1.0);
+	implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), REFRACT, 1.0);
 
 	objectList.push_back(&scene);
 	objectList.push_back(&sphere);
