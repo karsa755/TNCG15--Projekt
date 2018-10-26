@@ -333,7 +333,7 @@ color camera::castRay(ray &r, int depth) {
 	//if(depth >= MAXDEPTH) {
 	if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
 
-		return c*(((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
+		return (((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
 	}
 	else {
 		//recursive call

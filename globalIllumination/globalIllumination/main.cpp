@@ -14,7 +14,7 @@ polyModel createScene()
 	vertex lightVerts[3];
 	std::vector<triangle> sceneList;
 	double wallRho = 1.0;
-	double lightWallRho = 0.2;
+	double lightWallRho = 1.0;
 	double maxRho = 1.0;
 	roofVertices[0] = vertex(0.0f, 6.0f, 5.0f, 1.0f);
 	roofVertices[1] = vertex(-3.0f, 0.0f, 5.0f, 1.0f);
@@ -111,9 +111,9 @@ int main(int, char*[])
 	//CONFIG
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setBranchFactor(1);
-	cam->setShadowRays(2);
+	cam->setShadowRays(1);
 	cam->setDepth(20); 
-	cam->setInitRay(2);
+	cam->setInitRay(40);
 	
 
 
