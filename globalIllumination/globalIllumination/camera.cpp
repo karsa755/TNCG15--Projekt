@@ -45,6 +45,8 @@ void camera::getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::ve
 	glm::vec3 Im = I - (glm::dot(I,Z) * Z);
 	X = glm::normalize(Im);
 	Y = glm::cross(-X,Z);
+
+
 }
 
 glm::vec3 camera::localToWorld(const glm::vec3 & X, const glm::vec3 & Y, const glm::vec3 & Z, const glm::vec3 & v, const glm::vec3 &t)
@@ -186,7 +188,8 @@ void camera::printContext()
 	std::cout << "Rendering " << width << "x" << height << std::endl;
 	std::cout << "Branching Factor: " << FACTOR << std::endl;
 	std::cout << "Number Shadow Rays: " << SHADOWRAYS << std::endl;
-	std::cout << "Max Depth: " << MAXDEPTH << std::endl << std::endl;
+	std::cout << "Max Depth: " << MAXDEPTH << std::endl;
+	std::cout << "Init ray: " << initRAY << std::endl << std::endl;
 }
 
 void camera::addIntensity(glm::dvec3 val, int th)
@@ -288,6 +291,14 @@ color camera::castRay(ray &r, int depth) {
 		return color(0.0,0.0,0.0);
 	}
 
+	color c;
+	if (intersection.second.first->isImplicit()) {
+		c = intersection.second.first->getColor();
+	}
+	else {
+		c = intersection.second.second->getSurfaceColor();
+	}
+
 	if (intersection.second.second != nullptr && !intersection.second.first->isImplicit() && intersection.second.second->isEmitter) {
 		//hitting light source
 		//std::cout << "TO LIGHTSOURCE" << std::endl;
@@ -297,39 +308,31 @@ color camera::castRay(ray &r, int depth) {
 		return ret*LIGHTWATT / (2.0 * PI * AREA);
 	}
 
-		float russianRoulette = distribution(generator);
+	float russianRoulette = distribution(generator);
+	glm::vec3 normal = intersection.second.first->isImplicit() ?
+		((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
+		: intersection.second.second->getNormal();
 
-		//if(depth >= MAXDEPTH) {
-		if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
-		//shadow rays n' stuff
-		color dirLight = { 1.0, 1.0, 1.0 };
-		glm::vec3 normal = intersection.second.first->isImplicit() ?
-			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
-			: intersection.second.second->getNormal();
-		
-		vertex startPoint = { intersection.first + (normal * 0.01f),1.0f };
-		double lightHits = 0.0;
-		for (int i = 0; i < SHADOWRAYS; ++i)
-		{
-			vertex n = vertex(lightSamples.at(i), 1.0f);
-			ray toLight(startPoint, n);
+	vertex startPoint = { intersection.first + (normal * 0.01f),1.0f };
+	double lightHits = 0.0;
+	for (int i = 0; i < SHADOWRAYS; ++i)
+	{
+		vertex n = vertex(lightSamples.at(i), 1.0f);
+		ray toLight(startPoint, n);
 
-			auto closest = findClosestIntersection(toLight);
-			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
+		auto closest = findClosestIntersection(toLight);
+		if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
 
-				lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i)))) 
-							* std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) 
-							/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
-			}
+			lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i))))
+				* std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))))
+				/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
 		}
-		color c;
+	}
+	
 
-		if (intersection.second.first->isImplicit()) {
-			c = intersection.second.first->getColor();
-		}
-		else {
-			c = intersection.second.second->getSurfaceColor();
-		}
+	//if(depth >= MAXDEPTH) {
+	if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
+
 		return c*(((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
 	}
 	else {
@@ -343,24 +346,7 @@ color camera::castRay(ray &r, int depth) {
 
 		getLocalCoordSystem(Z,I,X,Y);
 
-		color finalColor(0.0, 0.0, 0.0);
-		vertex startPoint = { intersection.first + (Z * 0.01f),1.0f };
-
-		double lightHits = 0.0;
-		for (int i = 0; i < SHADOWRAYS; ++i)
-		{
-			vertex n = vertex(lightSamples.at(i), 1.0f);
-			ray toLight(startPoint, n);
-
-			auto closest = findClosestIntersection(toLight);
-			if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-				
-				lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i)))) 
-							* std::max(0.0f, glm::dot(Z, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint)))) 
-							/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
-			}
-		}
-		
+		color finalColor(0.0, 0.0, 0.0);		
 		if (intersection.second.first->getSurfProperty() == DIFFUSE)
 		{
 			//std::cout << "D" << std::endl;
@@ -381,17 +367,7 @@ color camera::castRay(ray &r, int depth) {
 				outRay.setImportance(r.getImportance() * cosTheta);
 				finalColor += (double)cosTheta * castRay(outRay, depth + 1); //WTF Why not Divide with pdf?
 			}
-			
 			finalColor /= ((double)N * PDF);
-			//finalColor *= rho;
-			color c;
-
-			if (intersection.second.first->isImplicit()) {
-				c = intersection.second.first->getColor();
-			}
-			else {
-				c = intersection.second.second->getSurfaceColor();
-			}
 			color dirLight = { lightHits, lightHits, lightHits };
 
 			color finC = rho * ( ( ((double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + finalColor ) * c;

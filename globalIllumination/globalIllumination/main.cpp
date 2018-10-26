@@ -111,9 +111,9 @@ int main(int, char*[])
 	//CONFIG
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setBranchFactor(1);
-	cam->setShadowRays(1);
+	cam->setShadowRays(2);
 	cam->setDepth(20); 
-	cam->setInitRay(4);
+	cam->setInitRay(2);
 	
 
 
