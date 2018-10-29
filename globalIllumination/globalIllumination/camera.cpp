@@ -331,7 +331,7 @@ color camera::castRay(ray &r, int depth) {
 	
 
 	//if(depth >= MAXDEPTH) {
-	if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
+	if (depth > 2 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
 
 		return (((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
 	}
@@ -370,34 +370,31 @@ color camera::castRay(ray &r, int depth) {
 			finalColor /= ((double)N * PDF);
 			color dirLight = { lightHits, lightHits, lightHits };
 
-			color finC = rho * ( ( ((double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + finalColor ) * c;
+			color finC = rho * ( ( ((double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + (finalColor) ) * c;
 			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
-			glm::vec3 pseudoDir = glm::normalize(intersection.first - glm::vec3(r.getStartVec()));
-			vertex dir = vertex(intersection.first, 1.0f) - r.getStartVec();
-			dir.w = 1.0f;
-			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));
-		
-			vertex startPt = vertex(intersection.first + (glm::vec3)Z * 0.1f, 1.0f);
-			//vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 5.0f, 1.0f);
-
-
-			vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
+			glm::vec3 dir3 = (intersection.first - (glm::vec3)r.getStartVec());
+			vertex dir = vertex(dir3, 1.0f);
+			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));		
+			vertex startPt = vertex(intersection.first + normal*0.1f, 1.0f);
+			vertex endPt = (vertex(intersection.first, 1.0f) + reflectDir);
 			ray rMirror(startPt, endPt);
 			return castRay(rMirror, depth);
 		}
 		else if(intersection.second.first->getSurfProperty() == ORENNAYAR) //have to check if this is correct
 		{
-			float standardDev = 3.0f * 3.0f;
+			float standardDev = 0.3f * 0.3f;
+			
 			float A = 1.0f - (standardDev / (2.0f*(standardDev + 0.33f)));
 			float B = (0.45f * standardDev) / (standardDev + 0.09f);
-			glm::vec3 dirIn = (glm::vec3)r.getStartVec() - intersection.first;
+			glm::vec3 dirIn = ((glm::vec3)r.getStartVec() - intersection.first);
 			glm::vec3 projectedIn = dirIn - (glm::dot(dirIn, normal) * normal);
-
-			glm::vec3 oppositeDir = glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
-			float thetaIN = std::max(0.0f, glm::dot(normal, oppositeDir));
+			float Fr = 0.0f;
+			
+			float thetaIN = glm::dot(normal, dirIn);
+			thetaIN = acosf(thetaIN);
 			color indir(0.0, 0.0, 0.0);
 			float PDF = 1 / (2.0 * PI);
 			for (int n = 0; n < N; ++n) {
@@ -411,10 +408,10 @@ color camera::castRay(ray &r, int depth) {
 
 				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
 				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
-				glm::vec3 directionWorld = glm::normalize(worldSample - intersection.first);
+				glm::vec3 directionWorld = (worldSample - intersection.first);
 				glm::vec3 projectedOut = directionWorld - (glm::dot(directionWorld, normal) * normal);
-				float deltaPhi = std::max(0.0f, glm::dot(projectedIn, projectedOut));
-				float Fr = rho * (A + B * std::max(0.0f, cosf(deltaPhi)) * sinf(alpha) * sinf(beta));
+				float deltaPhi = glm::dot(projectedIn, projectedOut);
+				Fr = rho *  (A + B * std::max(0.0f, deltaPhi * sinf(alpha) * sinf(beta)));
 				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
@@ -422,61 +419,66 @@ color camera::castRay(ray &r, int depth) {
 			}
 			indir /= ((double)N*PDF);
 			color dirLight = { lightHits, lightHits, lightHits };
-			color finalC = c*(((rho*(double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + indir);
+			color finalC = c*(((Fr*(double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + indir);
 			return finalC;
 		}
 		else if(intersection.second.first->getSurfProperty() == REFRACT)
 		{
-			float brewsterAngle = 0.0f;
-			float glassN = 1.5f;
-			float airN = 1.0f;
+			float n2 = 1.5f;
+			float n1 = 1.0f;
 			float ratio = 0.0f;
-			glm::vec3 oppositeDir = glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
-			float thetaIN = 0.0f;
+			glm::vec3 oppositeDir = glm::normalize((glm::vec3)r.getStartVec() - intersection.first);
+			glm::vec3 dirIn = (intersection.first - (glm::vec3)r.getStartVec());
 			
-			glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
-			float R0 = std::powf(((airN - glassN) / (airN + glassN)), 2.0f);
-
-			if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
-				< intersection.second.first->getRadius())
+			float thetaIN = glm::angle(oppositeDir, normal);
+			//glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
+			//if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
+			//	< intersection.second.first->getRadius())
+			if(std::fabs(thetaIN) <  (float)PI/2.0f )
 			{
 				//inside sphere
-				ratio = glassN / airN;
-				thetaIN = std::max(0.0f, glm::dot(-normal, oppositeDir));
+				std::swap(n1, n2);
+				normal *= -1.0f;
 			}
-			else
-			{
-				//outside sphere
-				ratio = airN / glassN;
-				thetaIN = std::max(0.0f, glm::dot(normal, oppositeDir));
-			}
-			float R = R0 + std::powf(1 - cosf(thetaIN), 5.0f);
+
+
+			float R0 = std::powf(((n1 - n2) / (n1 + n2)), 2.0f);
+			float R = R0 + (1-R0)* std::powf(1 - cosf(0.0f), 5.0f);
 			float T = 1 - R;
 
-			glm::vec3 dirIn = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
-			glm::vec3 reflectDir = glm::reflect(dirIn, normal);
-			glm::vec3 refractDir = glm::refract(dirIn, normal, ratio);
+			if (n1 > n2)
+			{
+				float brewsterAngle = asinf(n2 / n1);
+				thetaIN = glm::angle(oppositeDir, normal);
+				if (thetaIN > brewsterAngle) //total reflection only
+				{
+					vertex reflectDir = glm::reflect(vertex(dirIn,1.0f), vertex(normal, 1.0f));
+					vertex startPt = vertex(intersection.first + (glm::vec3)normal * 0.1f, 1.0f);
+					vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
+					ray rMirror(startPt, endPt);
+					return castRay(rMirror, depth+1);
+				}
 
-			vertex startPtReflect = vertex(intersection.first + reflectDir*0.001f, 1.0f);
-			vertex startPtRefract = vertex(intersection.first + refractDir*0.001f, 1.0f);
+			}
+			ratio = n1 / n2;
+
+			
+			glm::vec3 reflectDir = glm::reflect(dirIn, normal);
+			glm::vec3 refractDir = glm::refract(oppositeDir, normal, ratio); //hmm?
+
+			vertex startPtReflect = vertex(intersection.first + normal*0.1f, 1.0f);
+			vertex startPtRefract = vertex(intersection.first + refractDir*0.01f, 1.0f);
 			//for reflection
 			vertex endPtReflect = vertex(intersection.first, 1.0f) + vertex(reflectDir, 1.0f);
 			vertex endPtRefract = vertex(intersection.first, 1.0f) + vertex(refractDir, 1.0f);
 
-			if (thetaIN > brewsterAngle)
-			{
-				ray rayReflect(startPtReflect, endPtReflect);
-				color cReflect = (double)R * castRay(rayReflect, depth);
-				return cReflect;
-			}
-			else
-			{
-				ray rayReflect(startPtReflect, endPtReflect);
-				ray rayRefract(startPtRefract, endPtRefract);
-				color cReflect = (double)R * castRay(rayReflect, depth);
-				color cRefract = (double)T * castRay(rayRefract, depth);
-				return cReflect + cRefract;
-			}
+			ray rayReflect(startPtReflect, endPtReflect);
+			ray rayRefract(startPtRefract, endPtRefract);
+
+			//color cReflect = (double)R * castRay(rayReflect, depth+1);
+			
+			color cRefract = (double)T * castRay(rayRefract, depth+1);
+			return  cRefract;
 
 
 		}

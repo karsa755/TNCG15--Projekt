@@ -14,7 +14,7 @@ polyModel createScene()
 	vertex lightVerts[3];
 	std::vector<triangle> sceneList;
 	double wallRho = 1.0;
-	double lightWallRho = 1.0;
+	double lightWallRho = 0.2;
 	double maxRho = 1.0;
 	roofVertices[0] = vertex(0.0f, 6.0f, 5.0f, 1.0f);
 	roofVertices[1] = vertex(-3.0f, 0.0f, 5.0f, 1.0f);
@@ -34,7 +34,7 @@ polyModel createScene()
 	lightVerts[1] = vertex(4.5f, 1.0f, 4.25f, 1.0f);
 	lightVerts[2] = vertex(4.5f, -1.0f, 4.25f, 1.0f);
 	//light source
-	sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(0.0, 0.0, 0.0), true));
+	sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(0.0, 0.0, 0.0), true)); //5.5 och 4.5 innan
 
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[2], roofVertices[1], maxRho,color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[5], roofVertices[2], maxRho, color(1.0, 1.0, 1.0)));
@@ -99,7 +99,8 @@ int main(int, char*[])
 
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
-	implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), MIRROR, 1.0);
+	implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), REFRACT, 1.0);
+	//implicitModel sphere(1.5f, glm::vec3(1.8f, 0.0f, 0.0f), ORENNAYAR, 1.0, color(1.0,1.0,1.0)); //refract test
 
 	objectList.push_back(&scene);
 	objectList.push_back(&sphere);
@@ -111,9 +112,9 @@ int main(int, char*[])
 	//CONFIG
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setBranchFactor(1);
-	cam->setShadowRays(2);
+	cam->setShadowRays(1);
 	cam->setDepth(20); 
-	cam->setInitRay(2);
+	cam->setInitRay(1);
 	
 
 

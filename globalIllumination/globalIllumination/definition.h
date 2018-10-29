@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/intersect.hpp>
+#include <glm/gtx/vector_angle.hpp>
 #define DIFFUSE 0
 #define SPECULAR 1
 #define ORENNAYAR 2
