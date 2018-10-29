@@ -20,7 +20,8 @@
 
 #define SINGLE_THREAD 100
 #define MULTI_THREAD 200
-
+#define PHOTONMAPPING 91
+#define MONTECARLO 90
 
 using vertex = glm::vec4;
 using direction = glm::vec3;

@@ -8,6 +8,7 @@ camera::camera(std::vector<object*> ol) : generator(std::chrono::system_clock::n
 	objects = ol;
 	findLightSource();
 	distribution = std::uniform_real_distribution<float>(0, 1);	
+	int renderType = 90;
 }
 
 void camera::switchEye(glm::vec3 & e) {
@@ -173,6 +174,11 @@ void camera::getPrintRows(int toReturn[4])
 	toReturn[1] = timeToPrint[1].second;
 	toReturn[2] = timeToPrint[2].second;
 	toReturn[3] = timeToPrint[3].second;
+}
+
+void camera::setRenderType(int type)
+{
+	renderType = type;
 }
 
 void camera::clearReadyToPrint()
@@ -508,13 +514,23 @@ int camera::getInitRay()
 	return initRAY;
 }
 
+void camera::generatePhotonMap()
+{
+
+}
+
 
 void multi(camera *c, int dims[4], int thr) {
 	const float pixelWidth = 2.0 / c->getWidht();
 	const float pixelHeight = 2.0 / c->getHeight();
 	const float deltaPW = pixelWidth / 2.0;
 	const float deltaPH = pixelHeight / 2.0;
-	
+	int renderAs = c->getRenderType();
+
+	if (renderAs == PHOTONMAPPING)
+	{
+		//generate photon map 
+	}
 
 	for (int i = dims[0]; i < dims[2]; ++i) {
 		for (int j = dims[1]; j < dims[3]; ++j) {
@@ -536,8 +552,15 @@ void multi(camera *c, int dims[4], int thr) {
 				r.setImportance(1.0);
 
 				//cast
+				if (renderAs == PHOTONMAPPING)
+				{
+					//cast photon map ray
+				}
+				else
+				{
+					col += c->castRay(r, 0);
+				}
 				
-				col += c->castRay(r, 0);
 			}
 			col /= (double)c->getInitRay();
 			c->addIntensity(col, thr);
@@ -681,6 +704,11 @@ void camera::render() {
 		}
 	}
 	fclose(f);
+}
+
+int camera::getRenderType()
+{
+	return renderType;
 }
 
 camera::~camera()

@@ -10,6 +10,7 @@ public:
 	std::pair<glm::vec3, triangle*> rayIntersect(ray& r);
 	std::vector<triangle> getPolyList();
 	bool isImplicit();
+	bool isEmitter();
 
 private:
 	std::vector<triangle> polyList;

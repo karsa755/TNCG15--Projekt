@@ -37,6 +37,7 @@ public:
 	void setPrintReady(int row, int i);
 	bool isReadyToPrint();
 	void getPrintRows(int toReturn[4]);
+	void setRenderType(int type);
 	void clearReadyToPrint();
 	void printContext();
 	void addIntensity(glm::dvec3 val, int th);
@@ -45,7 +46,9 @@ public:
 	color castRay(ray &r, int depth);
 	void setInitRay(int ray);
 	int getInitRay();
+	void generatePhotonMap();
 	void render();
+	int getRenderType();
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution;
 
@@ -71,7 +74,7 @@ private:
 	int SHADOWRAYS = 1;
 	int MAXDEPTH = 1;
 	int initRAY = 1;
-
+	int renderType;
 	int MODE = SINGLE_THREAD;
 
 };

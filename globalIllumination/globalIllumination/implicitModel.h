@@ -11,6 +11,7 @@ public:
 	bool isImplicit();
 	float getRadius();
 	color getColor();
+	bool isEmitter();
 	
 
 private:

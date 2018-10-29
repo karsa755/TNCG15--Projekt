@@ -35,6 +35,11 @@ bool polyModel::isImplicit()
 	return false;
 }
 
+bool polyModel::isEmitter()
+{
+	return false;
+}
+
 
 polyModel::~polyModel()
 {

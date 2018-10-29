@@ -68,3 +68,8 @@ color implicitModel::getColor()
 	return _color;
 }
 
+bool implicitModel::isEmitter()
+{
+	return false;
+}
+

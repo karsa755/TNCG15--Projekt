@@ -1,8 +1,10 @@
 #include <iostream>
+#include "octree.h"
 #include "definition.h"
 #include "camera.h"
 #include "polyModel.h"
 #include "implicitModel.h"
+#include "lightSource.h"
 
 #include <chrono>
 
@@ -95,15 +97,21 @@ polyModel createTetra()
 
 int main(int, char*[])
 {
+	Octree<double> o(4096); /* Create 4096x4096x4096 octree containing doubles. */
+	o(1, 2, 3) = 3.1416;      /* Put pi in (1,2,3). */
+	o.erase(1, 2, 3);
 	std::vector<object*> objectList;
 
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
+
 	//implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), REFRACT, 1.0);
 	//implicitModel s1(1.5f, glm::vec3(6.0f, 2.0f, 3.0f), REFRACT, 1.0, color(1.0,1.0,1.0)); 
 	//implicitModel s2(1.0f, glm::vec3(5.0f, -1.0f, 1.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0)); 
 	//implicitModel s3(1.5f, glm::vec3(8.0f, 0.0f, -1.0f), MIRROR, 1.0, color(1.0, 1.0, 1.0)); 
-	implicitModel sphere(1.5f, glm::vec3(3.0f, 1.0f, 0.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0)); 
+	implicitModel sphere(1.5f, glm::vec3(3.0f, 1.0f, 0.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0));
+	lightSource light(2.0f, glm::vec3(5.0f, 0.0f, 5.0f));
+	
 
 
 	objectList.push_back(&scene);

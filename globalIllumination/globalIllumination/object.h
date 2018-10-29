@@ -20,6 +20,7 @@ class object
 		virtual color getColor();
 		virtual std::vector<triangle> getPolyList();
 		double getRho();
+		virtual bool isEmitter() = 0;
 
 	private:
 		glm::vec3 position;

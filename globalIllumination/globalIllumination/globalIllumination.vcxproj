@@ -76,7 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)/globalIllumination/glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/globalIllumination/octree;$(SolutionDir)/globalIllumination/glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -127,6 +127,7 @@
   <ItemGroup>
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="implicitModel.cpp" />
+    <ClCompile Include="lightSource.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="object.cpp" />
     <ClCompile Include="pixel.cpp" />
@@ -138,6 +139,7 @@
     <ClInclude Include="camera.h" />
     <ClInclude Include="definition.h" />
     <ClInclude Include="implicitModel.h" />
+    <ClInclude Include="lightSource.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="pixel.h" />
     <ClInclude Include="polyModel.h" />
