@@ -376,10 +376,9 @@ color camera::castRay(ray &r, int depth) {
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
 			glm::vec3 dir3 = (intersection.first - (glm::vec3)r.getStartVec());
-			vertex dir = vertex(dir3, 1.0f);
-			vertex reflectDir = glm::reflect(dir, vertex(Z, 1.0f));		
+			glm::vec3 reflectDir = glm::reflect(dir3, Z);		
 			vertex startPt = vertex(intersection.first + normal*0.1f, 1.0f);
-			vertex endPt = (vertex(intersection.first, 1.0f) + reflectDir);
+			vertex endPt = vertex(intersection.first + reflectDir,1.0f);
 			ray rMirror(startPt, endPt);
 			return castRay(rMirror, depth);
 		}
@@ -428,13 +427,13 @@ color camera::castRay(ray &r, int depth) {
 			float n1 = 1.0f;
 			float ratio = 0.0f;
 			glm::vec3 oppositeDir = glm::normalize((glm::vec3)r.getStartVec() - intersection.first);
-			glm::vec3 dirIn = (intersection.first - (glm::vec3)r.getStartVec());
+			glm::vec3 dirIn = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
 			
 			float thetaIN = glm::angle(oppositeDir, normal);
 			//glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
 			//if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
 			//	< intersection.second.first->getRadius())
-			if(std::fabs(thetaIN) <  (float)PI/2.0f )
+			if(std::fabs(thetaIN) >  (float)PI/2.0f )
 			{
 				//inside sphere
 				std::swap(n1, n2);
@@ -452,9 +451,9 @@ color camera::castRay(ray &r, int depth) {
 				thetaIN = glm::angle(oppositeDir, normal);
 				if (thetaIN > brewsterAngle) //total reflection only
 				{
-					vertex reflectDir = glm::reflect(vertex(dirIn,1.0f), vertex(normal, 1.0f));
+					glm::vec3 reflectDir = glm::reflect(dirIn, normal);
 					vertex startPt = vertex(intersection.first + (glm::vec3)normal * 0.1f, 1.0f);
-					vertex endPt = vertex(intersection.first, 1.0f) + reflectDir;
+					vertex endPt = vertex(intersection.first + reflectDir,1.0f);
 					ray rMirror(startPt, endPt);
 					return castRay(rMirror, depth+1);
 				}
@@ -464,7 +463,7 @@ color camera::castRay(ray &r, int depth) {
 
 			
 			glm::vec3 reflectDir = glm::reflect(dirIn, normal);
-			glm::vec3 refractDir = glm::refract(oppositeDir, normal, ratio); //hmm?
+			glm::vec3 refractDir = glm::refract(dirIn, normal, ratio); //hmm?
 
 			vertex startPtReflect = vertex(intersection.first + normal*0.1f, 1.0f);
 			vertex startPtRefract = vertex(intersection.first + refractDir*0.01f, 1.0f);
@@ -475,10 +474,10 @@ color camera::castRay(ray &r, int depth) {
 			ray rayReflect(startPtReflect, endPtReflect);
 			ray rayRefract(startPtRefract, endPtRefract);
 
-			//color cReflect = (double)R * castRay(rayReflect, depth+1);
+			color cReflect = (double)R * castRay(rayReflect, ++depth);
 			
-			color cRefract = (double)T * castRay(rayRefract, depth+1);
-			return  cRefract;
+			color cRefract = (double)T * castRay(rayRefract, depth);
+			return  cRefract + cReflect;
 
 
 		}
