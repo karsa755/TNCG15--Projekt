@@ -99,8 +99,8 @@ int main(int, char*[])
 
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
-	implicitModel sphere(0.75f, glm::vec3(1.0f, 0.0f, 0.0f), REFRACT, 1.0);
-	//implicitModel sphere(1.5f, glm::vec3(1.8f, 0.0f, 0.0f), ORENNAYAR, 1.0, color(1.0,1.0,1.0)); //refract test
+	//implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), REFRACT, 1.0);
+	implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, 0.0f), REFRACT, 1.0, color(1.0,1.0,1.0)); //refract test
 
 	objectList.push_back(&scene);
 	objectList.push_back(&sphere);

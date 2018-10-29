@@ -433,16 +433,17 @@ color camera::castRay(ray &r, int depth) {
 			//glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
 			//if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
 			//	< intersection.second.first->getRadius())
-			if(std::fabs(thetaIN) >  (float)PI/2.0f )
+			if(std::fabs(thetaIN) >=  (float)PI/2.0f )
 			{
 				//inside sphere
 				std::swap(n1, n2);
 				normal *= -1.0f;
+				thetaIN = glm::angle(oppositeDir, normal);
 			}
 
 
 			float R0 = std::powf(((n1 - n2) / (n1 + n2)), 2.0f);
-			float R = R0 + (1-R0)* std::powf(1 - cosf(0.0f), 5.0f);
+			float R = R0 + (1-R0)* std::powf(1 - cosf(thetaIN), 5.0f);
 			float T = 1 - R;
 
 			if (n1 > n2)
@@ -452,7 +453,7 @@ color camera::castRay(ray &r, int depth) {
 				if (thetaIN > brewsterAngle) //total reflection only
 				{
 					glm::vec3 reflectDir = glm::reflect(dirIn, normal);
-					vertex startPt = vertex(intersection.first + (glm::vec3)normal * 0.1f, 1.0f);
+					vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 0.1f, 1.0f);
 					vertex endPt = vertex(intersection.first + reflectDir,1.0f);
 					ray rMirror(startPt, endPt);
 					return castRay(rMirror, depth+1);
@@ -465,7 +466,7 @@ color camera::castRay(ray &r, int depth) {
 			glm::vec3 reflectDir = glm::reflect(dirIn, normal);
 			glm::vec3 refractDir = glm::refract(dirIn, normal, ratio); //hmm?
 
-			vertex startPtReflect = vertex(intersection.first + normal*0.1f, 1.0f);
+			vertex startPtReflect = vertex(intersection.first + reflectDir*0.1f, 1.0f);
 			vertex startPtRefract = vertex(intersection.first + refractDir*0.01f, 1.0f);
 			//for reflection
 			vertex endPtReflect = vertex(intersection.first, 1.0f) + vertex(reflectDir, 1.0f);
