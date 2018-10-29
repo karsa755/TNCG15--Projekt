@@ -44,7 +44,7 @@ void camera::findLightSource()
 void camera::getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::vec3 &X, glm::vec3 &Y) {
 	glm::vec3 Im = I - (glm::dot(I,Z) * Z);
 	X = glm::normalize(Im);
-	Y = glm::cross(-X,Z);
+	Y = glm::normalize(glm::cross(-X,Z));
 
 
 }
@@ -322,7 +322,6 @@ color camera::castRay(ray &r, int depth) {
 
 		auto closest = findClosestIntersection(toLight);
 		if (!closest.second.first->isImplicit() && closest.second.second->isEmitter) {
-
 			lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i))))
 				* std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))))
 				/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
@@ -331,7 +330,7 @@ color camera::castRay(ray &r, int depth) {
 	
 
 	//if(depth >= MAXDEPTH) {
-	if (depth > 2 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
+	if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
 
 		return (((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
 	}
@@ -339,7 +338,7 @@ color camera::castRay(ray &r, int depth) {
 		//recursive call
 		glm::vec3 X(0.0f);
 		glm::vec3 Y(0.0f);
-		glm::vec3 I = ((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
+		glm::vec3 I = glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
 		glm::vec3 Z = intersection.second.first->isImplicit() ? 
 								((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius()) 
 								: intersection.second.second->getNormal();
@@ -389,7 +388,7 @@ color camera::castRay(ray &r, int depth) {
 			float A = 1.0f - (standardDev / (2.0f*(standardDev + 0.33f)));
 			float B = (0.45f * standardDev) / (standardDev + 0.09f);
 			glm::vec3 dirIn = ((glm::vec3)r.getStartVec() - intersection.first);
-			glm::vec3 projectedIn = dirIn - (glm::dot(dirIn, normal) * normal);
+			glm::vec3 projectedIn = glm::normalize(dirIn - (glm::dot(dirIn, normal) * normal));
 			float Fr = 0.0f;
 			
 			float thetaIN = glm::dot(normal, dirIn);
@@ -408,7 +407,7 @@ color camera::castRay(ray &r, int depth) {
 				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
 				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
 				glm::vec3 directionWorld = (worldSample - intersection.first);
-				glm::vec3 projectedOut = directionWorld - (glm::dot(directionWorld, normal) * normal);
+				glm::vec3 projectedOut = glm::normalize(directionWorld - (glm::dot(directionWorld, normal) * normal));
 				float deltaPhi = glm::dot(projectedIn, projectedOut);
 				Fr = rho *  (A + B * std::max(0.0f, deltaPhi * sinf(alpha) * sinf(beta)));
 				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
@@ -456,7 +455,7 @@ color camera::castRay(ray &r, int depth) {
 					vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 0.1f, 1.0f);
 					vertex endPt = vertex(intersection.first + reflectDir,1.0f);
 					ray rMirror(startPt, endPt);
-					return castRay(rMirror, depth+1);
+					return castRay(rMirror, depth);
 				}
 
 			}
@@ -475,10 +474,17 @@ color camera::castRay(ray &r, int depth) {
 			ray rayReflect(startPtReflect, endPtReflect);
 			ray rayRefract(startPtRefract, endPtRefract);
 
-			color cReflect = (double)R * castRay(rayReflect, ++depth);
-			
-			color cRefract = (double)T * castRay(rayRefract, depth);
-			return  cRefract + cReflect;
+			if (R < 0.05f) {
+				T = 1.0;
+				color cRefract = (double)T * castRay(rayRefract, depth);
+				return  cRefract;
+			}
+			else {
+				color cReflect = (double)R * castRay(rayReflect, depth);
+				color cRefract = (double)T * castRay(rayRefract, depth);
+				return  cRefract + cReflect;
+			}
+
 
 
 		}
