@@ -1,5 +1,4 @@
 #include <iostream>
-#include "octree.h"
 #include "definition.h"
 #include "camera.h"
 #include "polyModel.h"
@@ -96,12 +95,12 @@ polyModel createTetra()
 }
 
 int main(int, char*[])
-{
+{	
+
 	Octree<double> o(4096); /* Create 4096x4096x4096 octree containing doubles. */
 	o(1, 2, 3) = 3.1416;      /* Put pi in (1,2,3). */
-	o.erase(1, 2, 3);
-	std::vector<object*> objectList;
 
+	std::vector<object*> objectList;
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
 
@@ -122,16 +121,12 @@ int main(int, char*[])
 	objectList.push_back(&tetra);
 
 	camera *cam = new camera(objectList);
-
-
 	//CONFIG
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setBranchFactor(1);
 	cam->setShadowRays(1);
 	cam->setDepth(20); 
 	cam->setInitRay(1);
-	
-
 
 	//STUFF
 	std::chrono::milliseconds start_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

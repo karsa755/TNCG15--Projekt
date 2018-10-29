@@ -23,6 +23,14 @@
 #define PHOTONMAPPING 91
 #define MONTECARLO 90
 
+struct photon {
+	glm::vec3 startPoint;
+	glm::vec3 direction;
+	float flux;
+	photon(glm::vec3 startPt, glm::vec3 dir, float f) : startPoint(startPt), direction(dir), flux(f) {};
+	photon() : startPoint(glm::vec3(0.0f)), direction(glm::vec3(0.0f)), flux(0.0f) {};
+};
+
 using vertex = glm::vec4;
 using direction = glm::vec3;
 using color = glm::dvec3;

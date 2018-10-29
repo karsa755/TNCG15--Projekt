@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include "octree.h"
 #include <random>
 #include <chrono>
 #include <thread>
@@ -56,6 +57,7 @@ private:
 	void findLightSource();
 	const static int width = 200;
 	const static int height = 200;
+	const static int boxSize = 16;
 	const glm::vec3 * currentEye;
 	const glm::vec3 position = glm::vec3(0.0,0.0,0.0);
 	const glm::vec3 eye1 = glm::vec3(-2.0,0.0,0.0);
@@ -76,6 +78,8 @@ private:
 	int initRAY = 1;
 	int renderType;
 	int MODE = SINGLE_THREAD;
-
+	Octree<std::vector<photon>> causticMap;
+	Octree<std::vector<photon>> globalMap;
+	
 };
 

@@ -2,8 +2,10 @@
 
 
 
-camera::camera(std::vector<object*> ol) : generator(std::chrono::system_clock::now().time_since_epoch().count())
+camera::camera(std::vector<object*> ol) : generator(std::chrono::system_clock::now().time_since_epoch().count()),
+globalMap(Octree<std::vector<photon>>(boxSize)), causticMap(Octree<std::vector<photon>>(boxSize))
 {
+	
 	currentEye = &eye2;
 	objects = ol;
 	findLightSource();
