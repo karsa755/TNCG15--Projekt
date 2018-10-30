@@ -35,7 +35,7 @@ polyModel createScene()
 	lightVerts[1] = vertex(4.5f, 1.0f, 4.25f, 1.0f);
 	lightVerts[2] = vertex(4.5f, -1.0f, 4.25f, 1.0f);
 	//light source
-	sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(0.0, 0.0, 0.0), true)); //5.5 och 4.5 innan
+	//sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(0.0, 0.0, 0.0), true)); //5.5 och 4.5 innan
 
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[2], roofVertices[1], maxRho,color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(roofVertices[0], roofVertices[5], roofVertices[2], maxRho, color(1.0, 1.0, 1.0)));
@@ -97,9 +97,6 @@ polyModel createTetra()
 int main(int, char*[])
 {	
 
-	Octree<double> o(4096); /* Create 4096x4096x4096 octree containing doubles. */
-	o(1, 2, 3) = 3.1416;      /* Put pi in (1,2,3). */
-
 	std::vector<object*> objectList;
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
@@ -109,24 +106,26 @@ int main(int, char*[])
 	//implicitModel s2(1.0f, glm::vec3(5.0f, -1.0f, 1.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0)); 
 	//implicitModel s3(1.5f, glm::vec3(8.0f, 0.0f, -1.0f), MIRROR, 1.0, color(1.0, 1.0, 1.0)); 
 	implicitModel sphere(1.5f, glm::vec3(3.0f, 1.0f, 0.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0));
-	lightSource light(2.0f, glm::vec3(5.0f, 0.0f, 5.0f));
+	lightSource light(2.0f, glm::vec3(5.0f, 0.0f, 4.8f));
 	
-
-
+	
 	objectList.push_back(&scene);
 	//objectList.push_back(&s1);
 	//objectList.push_back(&s2);
 	//objectList.push_back(&s3);
-	objectList.push_back(&sphere);
-	objectList.push_back(&tetra);
+	//objectList.push_back(&sphere);
+	//objectList.push_back(&tetra);
+	objectList.push_back(&light);
 
 	camera *cam = new camera(objectList);
 	//CONFIG
 	cam->setRenderingMode(MULTI_THREAD);
+	cam->setRenderType(PHOTONMAPPING);
 	cam->setBranchFactor(1);
 	cam->setShadowRays(1);
 	cam->setDepth(20); 
 	cam->setInitRay(1);
+	
 
 	//STUFF
 	std::chrono::milliseconds start_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

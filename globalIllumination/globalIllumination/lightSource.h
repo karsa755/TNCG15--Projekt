@@ -9,6 +9,7 @@ class lightSource : public object
 	float getRadius();
 	float getArea();
 	bool isImplicit();
+	glm::vec2 sampleCircle(float u, float v);
 	std::pair<glm::vec3, triangle*> rayIntersect(ray& r);
 	color getColor();
 	glm::vec3 getNormal();

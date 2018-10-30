@@ -10,7 +10,7 @@ globalMap(Octree<std::vector<photon>>(boxSize)), causticMap(Octree<std::vector<p
 	objects = ol;
 	findLightSource();
 	distribution = std::uniform_real_distribution<float>(0, 1);	
-	int renderType = 90;
+	int renderType = PHOTONMAPPING;
 }
 
 void camera::switchEye(glm::vec3 & e) {
@@ -19,7 +19,7 @@ void camera::switchEye(glm::vec3 & e) {
 
 triangle  camera::getLightSource()
 {
-	return lightSource;
+	return light;
 }
 
 
@@ -35,9 +35,16 @@ void camera::findLightSource()
 			{
 				if (pIt->isEmitter)
 				{
-					lightSource = (*pIt);
-					return;
+					light = (*pIt);
+					
 				}
+			}
+		}
+		else
+		{
+			if ((*it)->isEmitter())
+			{
+				photonSource = dynamic_cast<lightSource*>(*it);
 			}
 		}
 	}
@@ -240,9 +247,16 @@ std::pair<glm::vec3, std::pair<object*, triangle*>> camera::findClosestIntersect
 			intersections.push_back(intersectionObject);
 		}
 		else {
-			if ((*it)->isImplicit() && intersectionObject.first.x < MAX_FLOAT / 2.0f
+			if ( !(*it)->isEmitter() && (*it)->isImplicit() && intersectionObject.first.x < MAX_FLOAT / 2.0f
 				&& intersectionObject.first.y < MAX_FLOAT / 2.0f && intersectionObject.first.z < MAX_FLOAT / 2.0f) {
 				intersections.push_back(intersectionObject);
+			}
+			else
+			{
+				if ((*it)->isEmitter())
+				{
+					intersections.push_back(intersectionObject);
+				}
 			}
 		}
 	}
@@ -291,7 +305,7 @@ color camera::castRay(ray &r, int depth) {
 	{
 		float u = distribution(generator);
 		float v = (1 - u) * distribution(generator);
-		lightSamples.emplace_back(lightSource.sampleTriangle(u, v));
+		lightSamples.emplace_back(light.sampleTriangle(u, v));
 	}
 
 	if (intersection.second.first == nullptr) {
@@ -382,11 +396,8 @@ color camera::castRay(ray &r, int depth) {
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
-			glm::vec3 dir3 = (intersection.first - (glm::vec3)r.getStartVec());
-			glm::vec3 reflectDir = glm::reflect(dir3, Z);		
-			vertex startPt = vertex(intersection.first + normal*0.1f, 1.0f);
-			vertex endPt = vertex(intersection.first + reflectDir,1.0f);
-			ray rMirror(startPt, endPt);
+
+			ray rMirror = mirror(intersection, r, normal);
 			return castRay(rMirror, depth);
 		}
 		else if(intersection.second.first->getSurfProperty() == ORENNAYAR) //have to check if this is correct
@@ -430,71 +441,29 @@ color camera::castRay(ray &r, int depth) {
 		}
 		else if(intersection.second.first->getSurfProperty() == REFRACT)
 		{
-			float n2 = 1.5f;
-			float n1 = 1.0f;
-			float ratio = 0.0f;
-			glm::vec3 oppositeDir = glm::normalize((glm::vec3)r.getStartVec() - intersection.first);
-			glm::vec3 dirIn = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
-			
-			float thetaIN = glm::angle(oppositeDir, normal);
-			//glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
-			//if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
-			//	< intersection.second.first->getRadius())
-			if(std::fabs(thetaIN) >=  (float)PI/2.0f )
+
+			vertex v(0.0f);
+			ray rayReflect(v, v);
+			ray rayRefract(v, v);
+			float R, T;
+			bool refraction = refract(intersection, r, normal, rayReflect, rayRefract, R, T);
+			if (!refraction)
 			{
-				//inside sphere
-				std::swap(n1, n2);
-				normal *= -1.0f;
-				thetaIN = glm::angle(oppositeDir, normal);
+				return castRay(rayReflect, depth);
 			}
-
-
-			float R0 = std::powf(((n1 - n2) / (n1 + n2)), 2.0f);
-			float R = R0 + (1-R0)* std::powf(1 - cosf(thetaIN), 5.0f);
-			float T = 1 - R;
-
-			if (n1 > n2)
+			else
 			{
-				float brewsterAngle = asinf(n2 / n1);
-				thetaIN = glm::angle(oppositeDir, normal);
-				if (thetaIN > brewsterAngle) //total reflection only
-				{
-					glm::vec3 reflectDir = glm::reflect(dirIn, normal);
-					vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 0.1f, 1.0f);
-					vertex endPt = vertex(intersection.first + reflectDir,1.0f);
-					ray rMirror(startPt, endPt);
-					return castRay(rMirror, depth);
+				if (R < 0.05f) {
+					float T = 1.0;
+					color cRefract = (double)T * castRay(rayRefract, depth);
+					return  cRefract;
 				}
-
+				else {
+					color cReflect = (double)R * castRay(rayReflect, depth);
+					color cRefract = (double)T * castRay(rayRefract, depth);
+					return  cRefract + cReflect;
+				}
 			}
-			ratio = n1 / n2;
-
-			
-			glm::vec3 reflectDir = glm::reflect(dirIn, normal);
-			glm::vec3 refractDir = glm::refract(dirIn, normal, ratio); //hmm?
-
-			vertex startPtReflect = vertex(intersection.first + reflectDir*0.1f, 1.0f);
-			vertex startPtRefract = vertex(intersection.first + refractDir*0.01f, 1.0f);
-			//for reflection
-			vertex endPtReflect = vertex(intersection.first, 1.0f) + vertex(reflectDir, 1.0f);
-			vertex endPtRefract = vertex(intersection.first, 1.0f) + vertex(refractDir, 1.0f);
-
-			ray rayReflect(startPtReflect, endPtReflect);
-			ray rayRefract(startPtRefract, endPtRefract);
-
-			if (R < 0.05f) {
-				T = 1.0;
-				color cRefract = (double)T * castRay(rayRefract, depth);
-				return  cRefract;
-			}
-			else {
-				color cReflect = (double)R * castRay(rayReflect, depth);
-				color cRefract = (double)T * castRay(rayRefract, depth);
-				return  cRefract + cReflect;
-			}
-
-
-
 		}
 		else
 		{
@@ -516,23 +485,12 @@ int camera::getInitRay()
 	return initRAY;
 }
 
-void camera::generatePhotonMap()
-{
-
-}
-
-
 void multi(camera *c, int dims[4], int thr) {
 	const float pixelWidth = 2.0 / c->getWidht();
 	const float pixelHeight = 2.0 / c->getHeight();
 	const float deltaPW = pixelWidth / 2.0;
 	const float deltaPH = pixelHeight / 2.0;
 	int renderAs = c->getRenderType();
-
-	if (renderAs == PHOTONMAPPING)
-	{
-		//generate photon map 
-	}
 
 	for (int i = dims[0]; i < dims[2]; ++i) {
 		for (int j = dims[1]; j < dims[3]; ++j) {
@@ -652,6 +610,19 @@ void camera::render() {
 		int d_dims[4] = { hx,hy,width,height};
 
 		std::cout << "Started" << std::endl;
+		
+		int renderAs = getRenderType();
+		
+		if (renderAs == PHOTONMAPPING)
+		{
+			
+			//generate photon maps 
+			generateGlobalPhotonMap();
+			generateCausticPhotonMap();
+		}
+
+
+		/*
 
 		std::vector<std::thread> pool;
 		pool.emplace_back(std::thread{ multi, this, a_dims, 0 });
@@ -662,6 +633,7 @@ void camera::render() {
 		for (auto& t : pool) {
 			t.join();
 		}
+		*/
 	}
 	
 
@@ -715,4 +687,343 @@ int camera::getRenderType()
 
 camera::~camera()
 {
+
+}
+
+ray camera::mirror(const std::pair<glm::vec3, std::pair<object*, triangle*>>& intersection,  ray r, glm::vec3 normal)
+{
+	glm::vec3 dir3 = (intersection.first - (glm::vec3)r.getStartVec());
+	glm::vec3 reflectDir = glm::reflect(dir3, normal);
+	vertex startPt = vertex(intersection.first + normal * 0.1f, 1.0f);
+	vertex endPt = vertex(intersection.first + reflectDir, 1.0f);
+	ray rMirror(startPt, endPt);
+	return rMirror;
+}
+
+bool camera::refract(const std::pair<glm::vec3, std::pair<object*, triangle*>>& intersection, ray r,
+	glm::vec3 normal, ray & reflect, ray & refract, float & Rnew, float &Tnew)
+{
+	float n2 = 1.5f;
+	float n1 = 1.0f;
+	float ratio = 0.0f;
+	glm::vec3 oppositeDir = glm::normalize((glm::vec3)r.getStartVec() - intersection.first);
+	glm::vec3 dirIn = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
+
+	float thetaIN = glm::angle(oppositeDir, normal);
+	//glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
+	//if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
+	//	< intersection.second.first->getRadius())
+	if (std::fabs(thetaIN) >= (float)PI / 2.0f)
+	{
+		//inside sphere
+		std::swap(n1, n2);
+		normal *= -1.0f;
+		thetaIN = glm::angle(oppositeDir, normal);
+	}
+
+
+	float R0 = std::powf(((n1 - n2) / (n1 + n2)), 2.0f);
+	float R = R0 + (1 - R0)* std::powf(1 - cosf(thetaIN), 5.0f);
+	float T = 1 - R;
+
+	if (n1 > n2)
+	{
+		float brewsterAngle = asinf(n2 / n1);
+		thetaIN = glm::angle(oppositeDir, normal);
+		if (thetaIN > brewsterAngle) //total reflection only
+		{
+			glm::vec3 reflectDir = glm::reflect(dirIn, normal);
+			vertex startPt = vertex(intersection.first + (glm::vec3)reflectDir * 0.1f, 1.0f);
+			vertex endPt = vertex(intersection.first + reflectDir, 1.0f);
+			ray rMirror(startPt, endPt);
+			reflect = rMirror;
+			Rnew = 1;
+			return false;
+		}
+
+	}
+	ratio = n1 / n2;
+
+
+	glm::vec3 reflectDir = glm::reflect(dirIn, normal);
+	glm::vec3 refractDir = glm::refract(dirIn, normal, ratio); //hmm?
+
+	vertex startPtReflect = vertex(intersection.first + reflectDir * 0.1f, 1.0f);
+	vertex startPtRefract = vertex(intersection.first + refractDir * 0.01f, 1.0f);
+	//for reflection
+	vertex endPtReflect = vertex(intersection.first, 1.0f) + vertex(reflectDir, 1.0f);
+	vertex endPtRefract = vertex(intersection.first, 1.0f) + vertex(refractDir, 1.0f);
+
+	ray rayReflect(startPtReflect, endPtReflect);
+	ray rayRefract(startPtRefract, endPtRefract);
+	reflect = rayReflect;
+	refract = rayRefract;
+	Rnew = R;
+	Tnew = T;
+	return true;
+}
+
+void multiGenerate(camera *c , int d, int t, int thr, std::vector<photon> vec) {
+	for (int i = 0; i < d; ++i) {
+		float u = c->distribution(c->generator);
+		float v = c->distribution(c->generator);
+		glm::vec3 lightPos = glm::vec3(c->photonSource->sampleCircle(u, v), c->photonSource->getPosition().z);
+		glm::vec3 lightNormal = c->photonSource->getNormal();
+
+		//sample hemisphere
+		float uHemi = c->distribution(c->generator);
+		float vHemi = c->distribution(c->generator);
+		glm::vec3 localPoint = sampleHemisphere(uHemi, vHemi);
+		glm::vec3 outDir = glm::normalize(-localPoint);	//Assumes lightsource in 
+		glm::vec3 worldPoint = lightPos + outDir; // Get world point
+		//create ray
+		vertex startPoint = vertex(lightPos, 1.0f);
+		vertex endPoint = vertex(worldPoint, 1.0f);
+		ray r(startPoint, endPoint);
+
+		//vec.push_back(c->bouncePhoton(r,0,t));
+
+		if (i % (int)floor(d / 10) == 0) {
+			std::cout << "Thread (" << thr << "): " << i << " of " << d << " done" << std::endl;
+		}
+	}
+}
+
+void camera::merge(std::vector<photon> v) {
+	int x, y, z;
+	for (auto it = v.begin(); it != v.end(); ++it) {
+		x = static_cast<int>(round(it->startPoint.x)) + offsetVec.x;
+		y = static_cast<int>(round(it->startPoint.y)) + offsetVec.y;
+		z = static_cast<int>(round(it->startPoint.z)) + offsetVec.z;
+		std::vector<photon> photons = globalMap.at(x, y, z);
+		photons.push_back(*it);
+		globalMap(x, y, z) = photons;
+	}
+	
+	std::cout << globalMap.at(x, y, z)[0].startPoint.x << "," << globalMap.at(x, y, z)[0].startPoint.y << "," << globalMap.at(x, y, z)[0].startPoint.z << std::endl;
+}
+
+void camera::generateGlobalPhotonMap()
+{
+	/*
+	int delta = (int)floor(globalNr / 4);
+	std::vector<photon> v1;
+	std::vector<photon> v2;
+	std::vector<photon> v3;
+	std::vector<photon> v4;
+
+	std::vector<std::thread> pool;
+	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 0, v1});
+	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 1, v2});
+	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 2, v3});
+	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 3, v4});
+
+	for (auto& t : pool) {
+		t.join();
+	}
+
+	merge(v1);
+	merge(v2);
+	merge(v3);
+	merge(v4);
+
+
+	*/
+	
+
+	int x, y, z;
+	for (int i = 0; i < globalNr; ++i)
+	{
+		//sample light source
+		float u = distribution(generator);
+		float v = distribution(generator);
+		glm::vec3 lightPos = glm::vec3(photonSource->sampleCircle(u, v), photonSource->getPosition().z);
+		glm::vec3 lightNormal = photonSource->getNormal();
+
+		//sample hemisphere
+		float uHemi = distribution(generator);
+		float vHemi = distribution(generator);
+		glm::vec3 localPoint = sampleHemisphere(uHemi, vHemi);
+		glm::vec3 outDir = glm::normalize(-localPoint);	//Assumes lightsource in 
+		glm::vec3 worldPoint = lightPos + outDir; // Get world point
+		//create ray
+		vertex startPoint = vertex(lightPos + lightNormal*0.0001f, 1.0f);
+		vertex endPoint = vertex(worldPoint, 1.0f);
+		ray r(startPoint, endPoint);
+		bouncePhoton(r, 0, GLOBAL);
+
+		if ((i+1) % (int)(globalNr / 10) == 0) {
+			std::cout << (i+1) << " of " << globalNr << std::endl;
+
+		}
+	}
+
+		
+	
+}
+
+void camera::generateCausticPhotonMap()
+{
+	/*
+	for (int i = 0; i < causticNr; ++i)
+	{
+		//sample light source
+		float u = distribution(generator);
+		float v = distribution(generator);
+		glm::vec3 lightPos = glm::vec3(photonSource->sampleCircle(u, v), photonSource->getPosition().z);
+		glm::vec3 lightNormal = photonSource->getNormal();
+
+
+		if (i % (int)(causticNr / 10) == 0) {
+			std::cout << i << " of " << causticNr << " done" << std::endl;
+		}
+	}
+	*/
+}
+
+void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
+	photon p(pos,dir,f);
+	int x = static_cast<int>(round(p.startPoint.x)) + offsetVec.x;
+	int y = static_cast<int>(round(p.startPoint.y)) + offsetVec.y;
+	int z = static_cast<int>(round(p.startPoint.z)) + offsetVec.z;
+
+	if (TYPE == GLOBAL) {
+		std::vector<photon> photons = globalMap.at(x, y, z);
+		photons.push_back(p);
+		globalMap(x, y, z) = photons;
+	}
+	else {
+		std::vector<photon> photons = causticMap.at(x, y, z);
+		photons.push_back(p);
+		causticMap(x, y, z) = photons;
+	}
+}
+
+void camera::bouncePhoton(ray & r, int depth, int TYPE)
+{
+	float flux;
+	if(TYPE == GLOBAL)  flux = LIGHTWATT / globalNr;
+	else flux = LIGHTWATT / causticNr;
+
+	auto intersection = findClosestIntersection(r);
+	if (intersection.second.first == nullptr) {
+		std::cout << "ERROR" << std::endl;
+		return;
+	}
+	
+	if (intersection.second.first->isEmitter())
+	{
+		glm::vec3 pos = intersection.first;
+		glm::vec3 dir = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
+		addToMap(TYPE, pos, dir, flux);
+		return;
+	}
+	else
+	{
+		glm::vec3 normal = intersection.second.first->isImplicit() ?
+			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
+			: intersection.second.second->getNormal();
+
+		if (intersection.second.first->getSurfProperty() == DIFFUSE || intersection.second.first->getSurfProperty() == ORENNAYAR)
+		{
+			if (TYPE == CAUSTIC)
+			{
+				glm::vec3 pos = intersection.first;
+				glm::vec3 dir = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
+				addToMap(TYPE, pos, dir, flux);
+				return;
+			}
+			float cosTheta = distribution(generator);
+			float sidPhi = distribution(generator);
+			float russianRoulette = distribution(generator);
+			glm::vec3 X(0.0f);
+			glm::vec3 Y(0.0f);
+			glm::vec3 I = glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
+			getLocalCoordSystem(normal, I, X, Y);
+
+			glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
+
+			glm::vec3 worldSample = localToWorld(X, Y, normal, sample, intersection.first);
+
+			glm::vec3 directionWorld = glm::normalize(worldSample - intersection.first);
+
+			float rho;
+			if (intersection.second.first->isImplicit())
+			{
+				rho = (float)(intersection.second.first->getRho() / PI);
+			}
+			else
+			{
+				rho = (float)(intersection.second.second->getRho() / PI);
+			}
+			double Fr = rho;
+			if (intersection.second.first->getSurfProperty() == ORENNAYAR)
+			{
+				float standardDev = 0.3f * 0.3f;
+				float A = 1.0f - (standardDev / (2.0f*(standardDev + 0.33f)));
+				float B = (0.45f * standardDev) / (standardDev + 0.09f);
+				glm::vec3 dirIn = ((glm::vec3)r.getStartVec() - intersection.first);
+				glm::vec3 projectedIn = glm::normalize(dirIn - (glm::dot(dirIn, normal) * normal));
+				float thetaIN = glm::dot(normal, dirIn);
+				thetaIN = acosf(thetaIN);
+				float thetaOUT = acosf(cosTheta);
+				float alpha = std::max(thetaIN, thetaOUT);
+				float beta = std::min(thetaIN, thetaOUT);
+
+				glm::vec3 projectedOut = glm::normalize(directionWorld - (glm::dot(directionWorld, normal) * normal));
+				float deltaPhi = glm::dot(projectedIn, projectedOut);
+				Fr = rho * (A + B * std::max(0.0f, deltaPhi * sinf(alpha) * sinf(beta)));
+			}
+
+			if (depth > 0 && (depth >= MAXDEPTH || russianRoulette < Fr))
+			{
+				glm::vec3 pos = intersection.first;
+				glm::vec3 dir = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
+				addToMap(TYPE, pos, dir, flux);
+				return;
+			}
+			vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
+			vertex v2 = vertex(worldSample, 1.0f);
+			ray outRay(v1, v2);
+			addToMap(TYPE, intersection.first, directionWorld, flux);
+			return bouncePhoton(outRay, depth+1, TYPE);
+
+		}
+		else if (intersection.second.first->getSurfProperty() == MIRROR)
+		{
+			ray rMirror = mirror(intersection, r, normal);
+			return bouncePhoton(rMirror, depth, TYPE);
+		}
+		else if (intersection.second.first->getSurfProperty() == REFRACT)
+		{
+			vertex v(0.0f);
+			ray rayReflect(v, v);
+			ray rayRefract(v, v);
+			float R, T;
+			bool refraction = refract(intersection, r, normal, rayReflect, rayRefract, R, T);
+			if (!refraction)
+			{
+				return bouncePhoton(rayReflect, depth, TYPE);
+			}
+			else
+			{
+				float rand = distribution(generator);
+				if (rand < R)
+				{
+					return bouncePhoton(rayReflect, depth, TYPE);
+				}
+				else
+				{
+					return bouncePhoton(rayRefract, depth, TYPE);
+				}
+			}
+		}
+		else
+		{
+			std::cout << "ERROR" << std::endl;
+			return; // wtf
+		}
+	}
+	
+
 }

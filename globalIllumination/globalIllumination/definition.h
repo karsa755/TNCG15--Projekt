@@ -4,8 +4,10 @@
 #include <glm/vec4.hpp> // glm::vec4
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/vector_angle.hpp>
+#include <iostream>
 #define DIFFUSE 0
 #define SPECULAR 1
 #define ORENNAYAR 2
@@ -22,6 +24,8 @@
 #define MULTI_THREAD 200
 #define PHOTONMAPPING 91
 #define MONTECARLO 90
+#define CAUSTIC 300
+#define GLOBAL 301
 
 struct photon {
 	glm::vec3 startPoint;
@@ -29,6 +33,12 @@ struct photon {
 	float flux;
 	photon(glm::vec3 startPt, glm::vec3 dir, float f) : startPoint(startPt), direction(dir), flux(f) {};
 	photon() : startPoint(glm::vec3(0.0f)), direction(glm::vec3(0.0f)), flux(0.0f) {};
+	void print()
+	{
+		std::cout << "startPoint: (" << startPoint.x << "," << startPoint.y << "," << startPoint.z << ")" << std::endl;
+		std::cout << "direction: (" << direction.x << "," << direction.y << "," << direction.z << ")" << std::endl;
+		std::cout << "flux: " << flux << std::endl;
+	};
 };
 
 using vertex = glm::vec4;

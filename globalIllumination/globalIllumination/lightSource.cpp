@@ -31,6 +31,17 @@ bool lightSource::isImplicit()
 	return true;
 }
 
+glm::vec2 lightSource::sampleCircle(float u, float v)
+{
+	glm::vec3 pos = getPosition();
+	float phi = 2.0f * PI * u;
+	float r = std::sqrtf(v) * radius;
+	float x = r * cosf(phi) + pos.x;
+	float y = r * sinf(phi) + pos.y;
+	return glm::vec2(x, y);
+	
+}
+
 std::pair<glm::vec3, triangle*> lightSource::rayIntersect(ray & r)
 {
 	std::pair<glm::vec3, triangle*> tr(glm::vec3(MAX_FLOAT), nullptr); //should be numeric limits instead of -1.
@@ -48,16 +59,17 @@ std::pair<glm::vec3, triangle*> lightSource::rayIntersect(ray & r)
 		{
 			tr.first = pt;
 			return tr;
+		} 
+		else
+		{
+			return tr;
 		}
 	}
 	else
 	{
 		return tr;
 	}
-	
 
-	
-	return std::pair<glm::vec3, triangle*>();
 }
 
 color lightSource::getColor()
