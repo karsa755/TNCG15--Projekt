@@ -576,7 +576,8 @@ color camera::photonMapRender(ray & r)
 				}
 			}
 		}
-		return c * ((double)radiance + directLight);
+		color indirLight = calcIndirectLight(r, 0);
+		return c * ((double)radiance + directLight) + indirLight;
 	}
 	else if (intersection.second.first->getSurfProperty() == REFRACT)
 	{
@@ -611,6 +612,181 @@ color camera::photonMapRender(ray & r)
 	else
 	{
 		return color(0.0, 0.0, 0.0); //wtf
+	}
+}
+
+color camera::calcIndirectLight(ray & r, int depth)
+{
+	//find closest intersection
+	auto intersection = findClosestIntersection(r);
+	int N = FACTOR;
+	double rho;
+	if (intersection.second.first->isImplicit())
+	{
+		rho = intersection.second.first->getRho() / PI;
+	}
+	else
+	{
+		rho = intersection.second.second->getRho() / PI;
+	}
+
+	if (intersection.second.first == nullptr) {
+		std::cout << "ERROR" << std::endl;
+		return color(0.0, 0.0, 0.0);
+	}
+
+	color c;
+	if (intersection.second.first->isImplicit()) {
+		c = intersection.second.first->getColor();
+	}
+	else {
+		c = intersection.second.second->getSurfaceColor();
+	}
+
+	if (intersection.second.first->isEmitter()) {
+		return c * LIGHTWATT / (2.0 * PI * dynamic_cast<lightSource*>(intersection.second.first)->getArea());
+	}
+
+	float russianRoulette = distribution(generator);
+	glm::vec3 normal = intersection.second.first->isImplicit() ?
+		((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
+		: intersection.second.second->getNormal();
+
+	
+	if (depth > 0 && (depth >= MAXDEPTH || russianRoulette >= 0.2f)) { //max depth 20
+		float r0Global = 0.5f*0.5f;
+		int x = static_cast<int>(round(intersection.first.x)) + offsetVec.x;
+		int y = static_cast<int>(round(intersection.first.y)) + offsetVec.y;
+		int z = static_cast<int>(round(intersection.first.z)) + offsetVec.z;
+		float radiance = 0.0f;
+		for (int i = -1; i < 2; ++i)
+		{
+			for (int j = -1; j < 2; ++j)
+			{
+				for (int k = -1; k < 2; ++k)
+				{
+					std::vector<photon> &currentPhotonsGlobal = globalMap(x + i, y + j, z + k);
+					for (photon p : currentPhotonsGlobal)
+					{
+						float dist = glm::distance(intersection.first, p.startPoint);
+						if (dist < r0Global)
+						{
+							radiance += (rho * p.flux) / ((float)PI * dist);
+						}
+					}
+				}
+			}
+		}
+		return color(1.0, 1.0, 1.0) * (double)radiance;
+	}
+	else {
+		//recursive call
+		glm::vec3 X(0.0f);
+		glm::vec3 Y(0.0f);
+		glm::vec3 I = glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
+		glm::vec3 Z = intersection.second.first->isImplicit() ?
+			((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
+			: intersection.second.second->getNormal();
+
+		getLocalCoordSystem(Z, I, X, Y);
+
+		color finalColor(0.0, 0.0, 0.0);
+		if (intersection.second.first->getSurfProperty() == DIFFUSE)
+		{
+			//std::cout << "D" << std::endl;
+			double PDF = 1.0 / (2.0 * PI);
+
+			for (int n = 0; n < N; ++n) {
+				float cosTheta = distribution(generator);
+				float sidPhi = distribution(generator);
+				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
+
+				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
+
+				glm::vec3 directionWorld = glm::normalize(worldSample - intersection.first);
+
+				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
+				vertex v2 = vertex(worldSample, 1.0f);
+				ray outRay(v1, v2);
+				outRay.setImportance(r.getImportance() * cosTheta);
+				finalColor += (double)cosTheta * calcIndirectLight(outRay, depth + 1) * rho; //WTF Why not Divide with pdf?
+			}
+			finalColor /= ((double)N * PDF);
+			return c * finalColor;
+		}
+		else if (intersection.second.first->getSurfProperty() == MIRROR)
+		{
+
+			ray rMirror = mirror(intersection, r, normal);
+			return calcIndirectLight(rMirror, depth);
+		}
+		else if (intersection.second.first->getSurfProperty() == ORENNAYAR) //have to check if this is correct
+		{
+			float standardDev = 0.3f * 0.3f;
+
+			float A = 1.0f - (standardDev / (2.0f*(standardDev + 0.33f)));
+			float B = (0.45f * standardDev) / (standardDev + 0.09f);
+			glm::vec3 dirIn = ((glm::vec3)r.getStartVec() - intersection.first);
+			glm::vec3 projectedIn = glm::normalize(dirIn - (glm::dot(dirIn, normal) * normal));
+			float Fr = 0.0f;
+
+			float thetaIN = glm::dot(normal, dirIn);
+			thetaIN = acosf(thetaIN);
+			color indir(0.0, 0.0, 0.0);
+			float PDF = 1 / (2.0 * PI);
+			for (int n = 0; n < N; ++n) {
+				float cosTheta = distribution(generator);
+				float sidPhi = distribution(generator);
+				float thetaOUT = acosf(cosTheta);
+				float alpha = std::max(thetaIN, thetaOUT);
+				float beta = std::min(thetaIN, thetaOUT);
+
+				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
+				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
+				glm::vec3 directionWorld = (worldSample - intersection.first);
+				glm::vec3 projectedOut = glm::normalize(directionWorld - (glm::dot(directionWorld, normal) * normal));
+				float deltaPhi = glm::dot(projectedIn, projectedOut);
+				Fr = rho * (A + B * std::max(0.0f, deltaPhi * sinf(alpha) * sinf(beta)));
+				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
+				vertex v2 = vertex(worldSample, 1.0f);
+				ray outRay(v1, v2);
+				indir += calcIndirectLight(outRay, depth + 1) * (double)Fr * (double)cosTheta;
+			}
+			indir /= ((double)N*PDF);
+			
+			color finalC = c * indir;
+			return finalC;
+		}
+		else if (intersection.second.first->getSurfProperty() == REFRACT)
+		{
+
+			vertex v(0.0f);
+			ray rayReflect(v, v);
+			ray rayRefract(v, v);
+			float R, T;
+			bool refraction = refract(intersection, r, normal, rayReflect, rayRefract, R, T);
+			if (!refraction)
+			{
+				return calcIndirectLight(rayReflect, depth);
+			}
+			else
+			{
+				if (R < 0.05f) {
+					float T = 1.0;
+					color cRefract = (double)T * calcIndirectLight(rayRefract, depth);
+					return  cRefract;
+				}
+				else {
+					color cReflect = (double)R * calcIndirectLight(rayReflect, depth);
+					color cRefract = (double)T * calcIndirectLight(rayRefract, depth);
+					return  cRefract + cReflect;
+				}
+			}
+		}
+		else
+		{
+			return color(0.0, 0.0, 0.0); //do nothing
+		}
 	}
 }
 

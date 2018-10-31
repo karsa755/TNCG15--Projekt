@@ -50,6 +50,7 @@ public:
 	std::pair<glm::vec3, std::pair<object*, triangle*>> findClosestIntersection(ray &r);
 	color castRay(ray &r, int depth);
 	color photonMapRender(ray &r);
+	color calcIndirectLight(ray &r, int depth);
 	void setInitRay(int ray);
 	int getInitRay();
 	void generateGlobalPhotonMap();

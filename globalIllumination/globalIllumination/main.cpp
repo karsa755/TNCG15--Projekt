@@ -124,7 +124,7 @@ int main(int, char*[])
 	cam->setBranchFactor(1);
 	cam->setShadowRays(1);
 	cam->setDepth(20); 
-	cam->setInitRay(4);
+	cam->setInitRay(1);
 	
 
 	//STUFF
