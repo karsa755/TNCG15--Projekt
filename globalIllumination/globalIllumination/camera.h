@@ -49,6 +49,7 @@ public:
 	void setNewMaxIntensity(glm::dvec3 val, int th);
 	std::pair<glm::vec3, std::pair<object*, triangle*>> findClosestIntersection(ray &r);
 	color castRay(ray &r, int depth);
+	color photonMapRender(ray &r);
 	void setInitRay(int ray);
 	int getInitRay();
 	void generateGlobalPhotonMap();

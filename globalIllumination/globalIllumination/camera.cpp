@@ -474,6 +474,146 @@ color camera::castRay(ray &r, int depth) {
 	
 }
 
+color camera::photonMapRender(ray & r)
+{
+	//find closest intersection
+	auto intersection = findClosestIntersection(r);
+	int N = FACTOR;
+	double rho;
+	if (intersection.second.first->isImplicit())
+	{
+		rho = intersection.second.first->getRho() / PI;
+	}
+	else
+	{
+		rho = intersection.second.second->getRho() / PI;
+	}
+
+	if (intersection.second.first == nullptr) {
+		std::cout << "ERROR" << std::endl;
+		return color(0.0, 0.0, 0.0);
+	}
+
+	color c;
+	if (intersection.second.first->isImplicit()) {
+		c = intersection.second.first->getColor();
+	}
+	else {
+		c = intersection.second.second->getSurfaceColor();
+	}
+	if (intersection.second.first->isEmitter())
+	{
+
+		return c * LIGHTWATT / (2.0 * PI * dynamic_cast<lightSource*>(intersection.second.first)->getArea());
+	}
+	std::vector<glm::vec3> lightSamples;
+
+	for (int i = 0; i < SHADOWRAYS; ++i)
+	{
+		float u = distribution(generator);
+		float v = distribution(generator);
+		lightSamples.emplace_back(glm::vec3(photonSource->sampleCircle(u, v), photonSource->getPosition().z));
+	}
+
+
+
+	glm::vec3 normal = intersection.second.first->isImplicit() ?
+		((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
+		: intersection.second.second->getNormal();
+
+	vertex startPoint = { intersection.first + (normal * 0.01f),1.0f };
+	double lightHits = 0.0;
+	for (int i = 0; i < SHADOWRAYS; ++i)
+	{
+		vertex n = vertex(lightSamples.at(i), 1.0f);
+		ray toLight(startPoint, n);
+
+		auto closest = findClosestIntersection(toLight);
+		if (closest.second.first->isEmitter()) {
+			lightHits += (std::max(0.0f, glm::dot(glm::vec3(0.0f, 0.0f, -1.0f), glm::normalize((glm::vec3)startPoint - lightSamples.at(i))))
+				* std::max(0.0f, glm::dot(normal, glm::normalize(lightSamples.at(i) - (glm::vec3)startPoint))))
+				/ std::pow(std::max(1.0, (double)glm::distance(intersection.first, closest.first)), 2.0);
+		}
+	}
+	
+	color directLight = (rho * (double)LIGHTWATT * color(lightHits, lightHits, lightHits)) / ((double)SHADOWRAYS*2.0*(double)PI);
+	if (intersection.second.first->getSurfProperty() == DIFFUSE || intersection.second.first->getSurfProperty() == ORENNAYAR)
+	{
+
+		
+
+		float r0Caustic = 0.1f*0.1f;
+		float r0Global = 0.5f*0.5f;
+		int x = static_cast<int>(round(intersection.first.x)) + offsetVec.x;
+		int y = static_cast<int>(round(intersection.first.y)) + offsetVec.y;
+		int z = static_cast<int>(round(intersection.first.z)) + offsetVec.z;
+		float radiance = 0.0f;
+		for (int i = -1; i < 2; ++i)
+		{
+			for (int j = -1; j < 2; ++j)
+			{
+				for (int k = -1; k < 2; ++k)
+				{
+					std::vector<photon> &currentPhotonsCaustic = causticMap(x+i,y+j,z+k);
+					std::vector<photon> &currentPhotonsGlobal = globalMap(x + i, y + j, z + k);
+					for (photon p : currentPhotonsCaustic)
+					{
+						float dist = glm::distance(intersection.first, p.startPoint);
+						if (dist < r0Caustic)
+						{
+							radiance += (rho * p.flux) / ((float)PI * dist);
+						}
+						
+					}
+					for (photon p : currentPhotonsGlobal)
+					{
+						float dist = glm::distance(intersection.first, p.startPoint);
+						if (dist < r0Global)
+						{
+							radiance += (rho * p.flux) / ((float)PI * dist);
+						}
+					}
+				}
+			}
+		}
+		return c * ((double)radiance + directLight);
+	}
+	else if (intersection.second.first->getSurfProperty() == REFRACT)
+	{
+		vertex v(0.0f);
+		ray rayReflect(v, v);
+		ray rayRefract(v, v);
+		float R, T;
+		bool refraction = refract(intersection, r, normal, rayReflect, rayRefract, R, T);
+		if (!refraction)
+		{
+			return photonMapRender(rayReflect);
+		}
+		else
+		{
+			if (R < 0.05f) {
+				float T = 1.0;
+				color cRefract = (double)T * photonMapRender(rayRefract);
+				return  cRefract;
+			}
+			else {
+				color cReflect = (double)R * photonMapRender(rayReflect);
+				color cRefract = (double)T * photonMapRender(rayRefract);
+				return  cRefract + cReflect;
+			}
+		}
+	}
+	else if (intersection.second.first->getSurfProperty() == MIRROR)
+	{
+		ray rMirror = mirror(intersection, r, normal);
+		return photonMapRender(rMirror);
+	}
+	else
+	{
+		return color(0.0, 0.0, 0.0); //wtf
+	}
+}
+
 void camera::setInitRay(int ray)
 {
 	initRAY = ray;
@@ -514,6 +654,7 @@ void multi(camera *c, int dims[4], int thr) {
 				if (renderAs == PHOTONMAPPING)
 				{
 					//cast photon map ray
+					col += c->photonMapRender(r);
 				}
 				else
 				{
@@ -525,7 +666,7 @@ void multi(camera *c, int dims[4], int thr) {
 			c->addIntensity(col, thr);
 
 			double m = std::max(std::max(col.x, col.y), col.z);
-			if (m > c->getBrightest(thr) && m < LIGHTWATT / (4.0 * PI * AREA)) //ASUMES WHITE COLORED LIGHT
+			if (m > c->getBrightest(thr) && m < LIGHTWATT / (2.0 * PI * AREA)) //ASUMES WHITE COLORED LIGHT
 				c->setBrightest(m,thr);
 
 			c->setNewMaxIntensity(col, thr);
@@ -534,7 +675,7 @@ void multi(camera *c, int dims[4], int thr) {
 		
 		c->setPrintReady((i + 1) - dims[0], thr);
 		
-		if (c->isReadyToPrint() && c->threadPrinter == thr) {
+		if (c->isReadyToPrint()) {
 			c->clearConsole();
 			int statuses[4];
 			c->getPrintRows(statuses);
@@ -543,8 +684,8 @@ void multi(camera *c, int dims[4], int thr) {
 			for (int q = 0; q < 4; ++q) {
 				std::cout << "(Thread " << q << "): " << statuses[q] << " of " << dims[2] - dims[0] << " complete" << std::endl;
 			}
-
 			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter+1;
+
 		}
 	}
 }
@@ -616,14 +757,12 @@ void camera::render() {
 		
 		if (renderAs == PHOTONMAPPING)
 		{
-			
 			//generate photon maps 
 			generateGlobalPhotonMap();
 			generateCausticPhotonMap();
 		}
 
-
-		/*
+		
 		std::vector<std::thread> pool;
 		pool.emplace_back(std::thread{ multi, this, a_dims, 0 });
 		pool.emplace_back(std::thread{ multi, this, b_dims, 1 });
@@ -633,7 +772,7 @@ void camera::render() {
 		for (auto& t : pool) {
 			t.join();
 		}
-		*/
+		
 	}
 	
 
@@ -884,24 +1023,23 @@ void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
 	int x = static_cast<int>(round(newPhoton.startPoint.x)) + offsetVec.x;
 	int y = static_cast<int>(round(newPhoton.startPoint.y)) + offsetVec.y;
 	int z = static_cast<int>(round(newPhoton.startPoint.z)) + offsetVec.z;
-
+	OCT_MUTEX.lock();
 	if (TYPE == GLOBAL) {
-		OCT_MUTEX.lock();
 		std::vector<photon> &photons = globalMap(x, y, z);
 		photons.emplace_back(newPhoton);
-		OCT_MUTEX.unlock();
 	}
 	else {
 		std::vector<photon> &photons = causticMap(x, y, z);
 		photons.push_back(newPhoton);
 	}
+	OCT_MUTEX.unlock();
 }
 
 void camera::bouncePhoton(ray & r, int depth, int TYPE)
 {
 	float flux;
-	if(TYPE == GLOBAL)  flux = LIGHTWATT / globalNr;
-	else flux = LIGHTWATT / causticNr;
+	if(TYPE == GLOBAL)  flux = (globalNr > 0) ? LIGHTWATT / globalNr : 0;
+	else flux = (causticNr > 0) ? LIGHTWATT / causticNr : 0;
 
 	auto intersection = findClosestIntersection(r);
 	if (intersection.second.first == nullptr) {
