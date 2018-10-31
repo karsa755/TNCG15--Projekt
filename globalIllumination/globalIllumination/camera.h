@@ -74,7 +74,7 @@ public:
 
 
 	const static int globalNr = 100000;
-	const static int causticNr = 600;
+	const static int causticNr = 600000;
 private:
 	void findLightSource();
 	const static int width = 200;

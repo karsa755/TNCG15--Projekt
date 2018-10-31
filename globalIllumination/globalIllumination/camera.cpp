@@ -782,15 +782,27 @@ void multiGenerate(camera *c , int d, int t, int thr) {
 		ray r(startPoint, endPoint);
 
 		bool multicore = false;
-		c->bouncePhoton(r, 0, t);
+		auto intersection = c->findClosestIntersection(r);
+		if (t == GLOBAL || (t == CAUSTIC && (intersection.second.first->getSurfProperty() == MIRROR || intersection.second.first->getSurfProperty() == REFRACT)))
+		{
+			c->bouncePhoton(r, 0, t);
+		}
 		
-		if ((i+1) % (int)floor(d / (10)) == 0 && (c->threadPrinter == thr)) {
+		if (t == GLOBAL && (i+1) % (int)floor(d / (10)) == 0 && (c->threadPrinter == thr)) {
 			c->clearConsole();
 			std::cout << "(GLOBAL) Emitting " << c->globalNr << " Photons" << std::endl;
 			for (int q = 0; q < 4; ++q) {
 				std::cout << "Thread (" << q << "): " << (i + 1) << " of " << d << " done" << std::endl;
 			}
 			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter+1;
+		}
+		if (t == CAUSTIC && (i + 1) % (int)floor(d / (10)) == 0 && (c->threadPrinter == thr)) {
+			c->clearConsole();
+			std::cout << "(CAUSTIC) Emitting " << c->causticNr << " Photons" << std::endl;
+			for (int q = 0; q < 4; ++q) {
+				std::cout << "Thread (" << q << "): " << (i + 1) << " of " << d << " done" << std::endl;
+			}
+			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter + 1;
 		}
 	}
 }
@@ -838,21 +850,33 @@ void camera::generateGlobalPhotonMap()
 
 void camera::generateCausticPhotonMap()
 {
-	/*
-	for (int i = 0; i < causticNr; ++i)
-	{
-		//sample light source
-		float u = distribution(generator);
-		float v = distribution(generator);
-		glm::vec3 lightPos = glm::vec3(photonSource->sampleCircle(u, v), photonSource->getPosition().z);
-		glm::vec3 lightNormal = photonSource->getNormal();
+	int delta = (int)floor(causticNr / 4);
 
+	std::vector<std::thread> pool;
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 0 });
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 1 });
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 2 });
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 3 });
 
-		if (i % (int)(causticNr / 10) == 0) {
-			std::cout << i << " of " << causticNr << " done" << std::endl;
+	for (auto& t : pool) {
+		t.join();
+	}
+
+	//PRINT
+	int size = 0;
+	int size2 = 0;
+	for (int i = 0; i < 32; ++i) {
+		for (int j = 0; j < 32; ++j) {
+			for (int k = 0; k < 32; ++k) {
+				std::vector<photon> v = causticMap.at(i, j, k);
+				size += v.size();
+				std::vector<photon> v2 = globalMap.at(i, j, k);
+				size2 += v2.size();
+			}
 		}
 	}
-	*/
+	std::cout << std::endl << "Number of Global Photons stored: " << size2 << std::endl;
+	std::cout << std::endl << "Number of caustic Photons stored: " << size << std::endl << std::endl;
 }
 
 void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
@@ -930,7 +954,7 @@ void camera::bouncePhoton(ray & r, int depth, int TYPE)
 			{
 				rho = (float)(intersection.second.second->getRho() / PI);
 			}
-			double Fr = rho;
+			float Fr = rho;
 			if (intersection.second.first->getSurfProperty() == ORENNAYAR)
 			{
 				float standardDev = 0.3f * 0.3f;
