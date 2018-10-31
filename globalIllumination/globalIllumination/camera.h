@@ -6,6 +6,9 @@
 #include <chrono>
 #include <thread>
 #include <Windows.h>
+#include <future>
+#include <mutex>
+#include <array>
 
 #include "definition.h"
 #include "pixel.h"
@@ -50,9 +53,9 @@ public:
 	int getInitRay();
 	void generateGlobalPhotonMap();
 	void generateCausticPhotonMap();
-	void merge(std::vector<photon> v);
+	void merge(std::vector<photon>& v);
 	void bouncePhoton(ray &r, int depth, int TYPE);
-	void addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f);
+	void addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float flux);
 
 	ray mirror(const std::pair<glm::vec3, std::pair<object*, triangle*>> &intersection, ray r, glm::vec3 normal);
 	bool refract(const std::pair<glm::vec3, std::pair<object*, triangle*>> &intersection, ray r, glm::vec3 normal, 
@@ -67,13 +70,16 @@ public:
 	Octree<std::vector<photon>> causticMap;
 	Octree<std::vector<photon>> globalMap;
 
+	int threadPrinter = 0;
+
+
+	const static int globalNr = 100000;
+	const static int causticNr = 600;
 private:
 	void findLightSource();
 	const static int width = 200;
 	const static int height = 200;
 	const static int boxSize = 32;
-	const static int globalNr = 10000;
-	const static int causticNr = 600;
 	
 	const glm::vec3 * currentEye;
 	const glm::vec3 position = glm::vec3(0.0,0.0,0.0);
@@ -95,6 +101,8 @@ private:
 	int initRAY = 1;
 	int renderType;
 	int MODE = SINGLE_THREAD;
+
+	std::mutex OCT_MUTEX;
 
 	
 };

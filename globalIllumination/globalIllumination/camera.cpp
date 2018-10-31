@@ -5,7 +5,6 @@
 camera::camera(std::vector<object*> ol) : generator(std::chrono::system_clock::now().time_since_epoch().count()),
 globalMap(Octree<std::vector<photon>>(boxSize)), causticMap(Octree<std::vector<photon>>(boxSize))
 {
-	
 	currentEye = &eye2;
 	objects = ol;
 	findLightSource();
@@ -535,7 +534,7 @@ void multi(camera *c, int dims[4], int thr) {
 		
 		c->setPrintReady((i + 1) - dims[0], thr);
 		
-		if (c->isReadyToPrint()) {
+		if (c->isReadyToPrint() && c->threadPrinter == thr) {
 			c->clearConsole();
 			int statuses[4];
 			c->getPrintRows(statuses);
@@ -544,6 +543,8 @@ void multi(camera *c, int dims[4], int thr) {
 			for (int q = 0; q < 4; ++q) {
 				std::cout << "(Thread " << q << "): " << statuses[q] << " of " << dims[2] - dims[0] << " complete" << std::endl;
 			}
+
+			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter+1;
 		}
 	}
 }
@@ -623,7 +624,6 @@ void camera::render() {
 
 
 		/*
-
 		std::vector<std::thread> pool;
 		pool.emplace_back(std::thread{ multi, this, a_dims, 0 });
 		pool.emplace_back(std::thread{ multi, this, b_dims, 1 });
@@ -763,7 +763,7 @@ bool camera::refract(const std::pair<glm::vec3, std::pair<object*, triangle*>>& 
 	return true;
 }
 
-void multiGenerate(camera *c , int d, int t, int thr, std::vector<photon> vec) {
+void multiGenerate(camera *c , int d, int t, int thr) {
 	for (int i = 0; i < d; ++i) {
 		float u = c->distribution(c->generator);
 		float v = c->distribution(c->generator);
@@ -781,15 +781,21 @@ void multiGenerate(camera *c , int d, int t, int thr, std::vector<photon> vec) {
 		vertex endPoint = vertex(worldPoint, 1.0f);
 		ray r(startPoint, endPoint);
 
-		//vec.push_back(c->bouncePhoton(r,0,t));
-
-		if (i % (int)floor(d / 10) == 0) {
-			std::cout << "Thread (" << thr << "): " << i << " of " << d << " done" << std::endl;
+		bool multicore = false;
+		c->bouncePhoton(r, 0, t);
+		
+		if ((i+1) % (int)floor(d / (10)) == 0 && (c->threadPrinter == thr)) {
+			c->clearConsole();
+			std::cout << "(GLOBAL) Emitting " << c->globalNr << " Photons" << std::endl;
+			for (int q = 0; q < 4; ++q) {
+				std::cout << "Thread (" << q << "): " << (i + 1) << " of " << d << " done" << std::endl;
+			}
+			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter+1;
 		}
 	}
 }
 
-void camera::merge(std::vector<photon> v) {
+void camera::merge(std::vector<photon>& v) {
 	int x, y, z;
 	for (auto it = v.begin(); it != v.end(); ++it) {
 		x = static_cast<int>(round(it->startPoint.x)) + offsetVec.x;
@@ -799,66 +805,34 @@ void camera::merge(std::vector<photon> v) {
 		photons.push_back(*it);
 		globalMap(x, y, z) = photons;
 	}
-	
-	std::cout << globalMap.at(x, y, z)[0].startPoint.x << "," << globalMap.at(x, y, z)[0].startPoint.y << "," << globalMap.at(x, y, z)[0].startPoint.z << std::endl;
 }
 
 void camera::generateGlobalPhotonMap()
 {
-	/*
+	
 	int delta = (int)floor(globalNr / 4);
-	std::vector<photon> v1;
-	std::vector<photon> v2;
-	std::vector<photon> v3;
-	std::vector<photon> v4;
-
+	
 	std::vector<std::thread> pool;
-	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 0, v1});
-	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 1, v2});
-	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 2, v3});
-	pool.emplace_back(std::thread{ multiGenerate, this,  delta, GLOBAL, 3, v4});
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 0 });
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 1 });
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 2 });
+	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 3 });
 
 	for (auto& t : pool) {
 		t.join();
 	}
-
-	merge(v1);
-	merge(v2);
-	merge(v3);
-	merge(v4);
-
-
-	*/
 	
-
-	int x, y, z;
-	for (int i = 0; i < globalNr; ++i)
-	{
-		//sample light source
-		float u = distribution(generator);
-		float v = distribution(generator);
-		glm::vec3 lightPos = glm::vec3(photonSource->sampleCircle(u, v), photonSource->getPosition().z);
-		glm::vec3 lightNormal = photonSource->getNormal();
-
-		//sample hemisphere
-		float uHemi = distribution(generator);
-		float vHemi = distribution(generator);
-		glm::vec3 localPoint = sampleHemisphere(uHemi, vHemi);
-		glm::vec3 outDir = glm::normalize(-localPoint);	//Assumes lightsource in 
-		glm::vec3 worldPoint = lightPos + outDir; // Get world point
-		//create ray
-		vertex startPoint = vertex(lightPos + lightNormal*0.0001f, 1.0f);
-		vertex endPoint = vertex(worldPoint, 1.0f);
-		ray r(startPoint, endPoint);
-		bouncePhoton(r, 0, GLOBAL);
-
-		if ((i+1) % (int)(globalNr / 10) == 0) {
-			std::cout << (i+1) << " of " << globalNr << std::endl;
-
+	//PRINT
+	int size = 0;
+	for (int i = 0; i < 32; ++i) {
+		for (int j = 0; j < 32; ++j) {
+			for (int k = 0; k < 32; ++k) {
+				std::vector<photon> v = globalMap.at(i, j, k);
+				size += v.size();
+			}
 		}
 	}
-
-		
+	std::cout << std::endl << "Number of Global Photons stored: " << size << std::endl << std::endl;
 	
 }
 
@@ -882,20 +856,20 @@ void camera::generateCausticPhotonMap()
 }
 
 void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
-	photon p(pos,dir,f);
-	int x = static_cast<int>(round(p.startPoint.x)) + offsetVec.x;
-	int y = static_cast<int>(round(p.startPoint.y)) + offsetVec.y;
-	int z = static_cast<int>(round(p.startPoint.z)) + offsetVec.z;
+	photon newPhoton(pos,dir,f);
+	int x = static_cast<int>(round(newPhoton.startPoint.x)) + offsetVec.x;
+	int y = static_cast<int>(round(newPhoton.startPoint.y)) + offsetVec.y;
+	int z = static_cast<int>(round(newPhoton.startPoint.z)) + offsetVec.z;
 
 	if (TYPE == GLOBAL) {
-		std::vector<photon> photons = globalMap.at(x, y, z);
-		photons.push_back(p);
-		globalMap(x, y, z) = photons;
+		OCT_MUTEX.lock();
+		std::vector<photon> &photons = globalMap(x, y, z);
+		photons.emplace_back(newPhoton);
+		OCT_MUTEX.unlock();
 	}
 	else {
-		std::vector<photon> photons = causticMap.at(x, y, z);
-		photons.push_back(p);
-		causticMap(x, y, z) = photons;
+		std::vector<photon> &photons = causticMap(x, y, z);
+		photons.push_back(newPhoton);
 	}
 }
 

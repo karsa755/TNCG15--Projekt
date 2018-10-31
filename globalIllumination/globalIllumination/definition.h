@@ -39,6 +39,7 @@ struct photon {
 		std::cout << "direction: (" << direction.x << "," << direction.y << "," << direction.z << ")" << std::endl;
 		std::cout << "flux: " << flux << std::endl;
 	};
+	
 };
 
 using vertex = glm::vec4;
