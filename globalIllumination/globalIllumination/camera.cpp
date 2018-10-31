@@ -576,8 +576,8 @@ color camera::photonMapRender(ray & r)
 				}
 			}
 		}
-		color indirLight = calcIndirectLight(r, 0);
-		return c * ((double)radiance + directLight) + indirLight;
+		//color indirLight = calcIndirectLight(r, 0);
+		return c * ((double)radiance + directLight);
 	}
 	else if (intersection.second.first->getSurfProperty() == REFRACT)
 	{
@@ -677,7 +677,8 @@ color camera::calcIndirectLight(ray & r, int depth)
 				}
 			}
 		}
-		return color(1.0, 1.0, 1.0) * (double)radiance;
+		//return color(1.0, 1.0, 1.0);
+		return (color(1.0, 1.0, 1.0)) / (2.0*PI);
 	}
 	else {
 		//recursive call
