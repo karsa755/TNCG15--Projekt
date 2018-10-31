@@ -543,7 +543,7 @@ color camera::photonMapRender(ray & r)
 		
 
 		float r0Caustic = 0.1f*0.1f;
-		float r0Global = 0.5f*0.5f;
+		float r0Global = 0.4f*0.4f;
 		int x = static_cast<int>(round(intersection.first.x)) + offsetVec.x;
 		int y = static_cast<int>(round(intersection.first.y)) + offsetVec.y;
 		int z = static_cast<int>(round(intersection.first.z)) + offsetVec.z;

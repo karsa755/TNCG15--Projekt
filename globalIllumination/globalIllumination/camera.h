@@ -75,12 +75,12 @@ public:
 	int threadPrinter = 0;
 
 
-	const static int globalNr = 100000;
-	const static int causticNr = 600000;
+	const static int globalNr = 3000000;
+	const static int causticNr = 16000000;
 private:
 	void findLightSource();
-	const static int width = 200;
-	const static int height = 200;
+	const static int width = 400;
+	const static int height = 400;
 	const static int boxSize = 32;
 	
 	const glm::vec3 * currentEye;
