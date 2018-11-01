@@ -12,10 +12,6 @@ globalMap(Octree<std::vector<photon>>(boxSize)), causticMap(Octree<std::vector<p
 	int renderType = PHOTONMAPPING;
 }
 
-void camera::switchEye(glm::vec3 & e) {
-	currentEye = &e;
-}
-
 triangle  camera::getLightSource()
 {
 	return light;
@@ -111,7 +107,7 @@ void camera::setDepth(int d)
 }
 
 
-int camera::getWidht()
+int camera::getWidth()
 {
 	return width;
 }
@@ -129,16 +125,6 @@ const glm::vec3 * camera::getCurrentEye()
 void camera::setPixelValue(color c, int i, int j)
 {
 	image[i][j].setIntensity(c);
-}
-
-double camera::getBrightest(int i)
-{
-	return brightest[i];
-}
-
-void camera::setBrightest(int v, int i)
-{
-	brightest[i] = v;
 }
 
 void camera::setRenderingMode(int mode)
@@ -165,58 +151,25 @@ void camera::clearConsole()
 
 }
 
-void camera::setPrintReady(int row, int i)
-{
-	timeToPrint[i].first = true;
-	timeToPrint[i].second = row;
-}
-
-bool camera::isReadyToPrint()
-{
-	return (timeToPrint[0].first && timeToPrint[1].first && timeToPrint[2].first && timeToPrint[3].first);
-}
-
-void camera::getPrintRows(int toReturn[4])
-{
-	toReturn[0] = timeToPrint[0].second;
-	toReturn[1] = timeToPrint[1].second;
-	toReturn[2] = timeToPrint[2].second;
-	toReturn[3] = timeToPrint[3].second;
-}
 
 void camera::setRenderType(int type)
 {
 	renderType = type;
 }
 
-void camera::clearReadyToPrint()
-{
-	timeToPrint[0].first = false;
-	timeToPrint[1].first = false;
-	timeToPrint[2].first = false;
-	timeToPrint[3].first = false;
-}
-
 void camera::printContext()
 {
-	std::cout << "Rendering " << width << "x" << height << std::endl;
+	std::string s;
+	s = (MODE == SINGLE_THREAD) ? " [Single Thread]" : " [" + std::to_string(std::thread::hardware_concurrency()) + " Threads]";
+	std::cout << "Rendering " << width << "x" << height << s << std::endl;
 	std::cout << "Branching Factor: " << FACTOR << std::endl;
 	std::cout << "Number Shadow Rays: " << SHADOWRAYS << std::endl;
 	std::cout << "Max Depth: " << MAXDEPTH << std::endl;
-	std::cout << "Init ray: " << initRAY << std::endl << std::endl;
-}
-
-void camera::addIntensity(glm::dvec3 val, int th)
-{
-	intensities[th] += val;
-
-}
-
-void camera::setNewMaxIntensity(glm::dvec3 val, int th)
-{
-	intensityRange[th].x = std::max(val.x, intensityRange[th].x);
-	intensityRange[th].y = std::max(val.y, intensityRange[th].y);
-	intensityRange[th].z = std::max(val.z, intensityRange[th].z);
+	std::cout << "Init ray: " << initRAY << std::endl;
+	if (renderType == PHOTONMAPPING) {
+		std::cout <<"Globab Photons: " << storedGlobal << " (" << globalNr << " emitted)" << std::endl;
+		std::cout << "Caustic Photons: " << storedCaustic << " (" << causticNr << " emitted)" << std::endl << std::endl;
+	}
 }
 
 
@@ -320,9 +273,8 @@ color camera::castRay(ray &r, int depth) {
 		c = intersection.second.second->getSurfaceColor();
 	}
 
+	//hitting light source
 	if (intersection.second.second != nullptr && !intersection.second.first->isImplicit() && intersection.second.second->isEmitter) {
-		//hitting light source
-		//std::cout << "TO LIGHTSOURCE" << std::endl;
 		color ret = intersection.second.second->getSurfaceColor();
 		if (depth == 0) return color(1.0, 1.0, 1.0) * LIGHTWATT / (2.0 * PI * AREA); // if first bounce		
 		
@@ -369,7 +321,6 @@ color camera::castRay(ray &r, int depth) {
 		color finalColor(0.0, 0.0, 0.0);		
 		if (intersection.second.first->getSurfProperty() == DIFFUSE)
 		{
-			//std::cout << "D" << std::endl;
 			double PDF = 1.0 / (2.0 * PI);
 			
 			for (int n = 0; n < N; ++n) {
@@ -384,8 +335,7 @@ color camera::castRay(ray &r, int depth) {
 				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
-				outRay.setImportance(r.getImportance() * cosTheta);
-				finalColor += (double)cosTheta * castRay(outRay, depth + 1); //WTF Why not Divide with pdf?
+				finalColor += (double)cosTheta * castRay(outRay, depth + 1);
 			}
 			finalColor /= ((double)N * PDF);
 			color dirLight = { lightHits, lightHits, lightHits };
@@ -399,7 +349,7 @@ color camera::castRay(ray &r, int depth) {
 			ray rMirror = mirror(intersection, r, normal);
 			return castRay(rMirror, depth);
 		}
-		else if(intersection.second.first->getSurfProperty() == ORENNAYAR) //have to check if this is correct
+		else if(intersection.second.first->getSurfProperty() == ORENNAYAR)
 		{
 			float standardDev = 0.3f * 0.3f;
 			
@@ -419,8 +369,6 @@ color camera::castRay(ray &r, int depth) {
 				float thetaOUT = acosf(cosTheta);
 				float alpha = std::max(thetaIN, thetaOUT);
 				float beta = std::min(thetaIN, thetaOUT);
-
-
 
 				glm::vec3 sample = sampleHemisphere(cosTheta, sidPhi);
 				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
@@ -469,9 +417,6 @@ color camera::castRay(ray &r, int depth) {
 			return color(0.0, 0.0, 0.0); //do nothing
 		}
 	}
-
-
-	
 }
 
 color camera::photonMapRender(ray & r)
@@ -539,9 +484,6 @@ color camera::photonMapRender(ray & r)
 	color directLight = (rho * (double)LIGHTWATT * color(lightHits, lightHits, lightHits)) / ((double)SHADOWRAYS*2.0*(double)PI);
 	if (intersection.second.first->getSurfProperty() == DIFFUSE || intersection.second.first->getSurfProperty() == ORENNAYAR)
 	{
-
-		
-
 		float r0Caustic = 0.1f*0.1f;
 		float r0Global = 0.4f*0.4f;
 		int x = static_cast<int>(round(intersection.first.x)) + offsetVec.x;
@@ -677,7 +619,6 @@ color camera::calcIndirectLight(ray & r, int depth)
 				}
 			}
 		}
-		//return color(1.0, 1.0, 1.0);
 		return (color(1.0, 1.0, 1.0)) / (2.0*PI);
 	}
 	else {
@@ -694,7 +635,6 @@ color camera::calcIndirectLight(ray & r, int depth)
 		color finalColor(0.0, 0.0, 0.0);
 		if (intersection.second.first->getSurfProperty() == DIFFUSE)
 		{
-			//std::cout << "D" << std::endl;
 			double PDF = 1.0 / (2.0 * PI);
 
 			for (int n = 0; n < N; ++n) {
@@ -709,19 +649,17 @@ color camera::calcIndirectLight(ray & r, int depth)
 				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
-				outRay.setImportance(r.getImportance() * cosTheta);
-				finalColor += (double)cosTheta * calcIndirectLight(outRay, depth + 1) * rho; //WTF Why not Divide with pdf?
+				finalColor += (double)cosTheta * calcIndirectLight(outRay, depth + 1) * rho;
 			}
 			finalColor /= ((double)N * PDF);
 			return c * finalColor;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
 		{
-
 			ray rMirror = mirror(intersection, r, normal);
 			return calcIndirectLight(rMirror, depth);
 		}
-		else if (intersection.second.first->getSurfProperty() == ORENNAYAR) //have to check if this is correct
+		else if (intersection.second.first->getSurfProperty() == ORENNAYAR)
 		{
 			float standardDev = 0.3f * 0.3f;
 
@@ -801,69 +739,32 @@ int camera::getInitRay()
 	return initRAY;
 }
 
-void multi(camera *c, int dims[4], int thr) {
-	const float pixelWidth = 2.0 / c->getWidht();
+void old_multi(camera *c, int line, int thr) {
+	const float pixelWidth = 2.0 / c->getWidth();
 	const float pixelHeight = 2.0 / c->getHeight();
 	const float deltaPW = pixelWidth / 2.0;
 	const float deltaPH = pixelHeight / 2.0;
 	int renderAs = c->getRenderType();
 
-	for (int i = dims[0]; i < dims[2]; ++i) {
-		for (int j = dims[1]; j < dims[3]; ++j) {
+	int width = c->getWidth();
+	int initNum = c->getInitRay();
+	for (int i = 0; i < width; ++i) {
+		color col(0.0);
+		for (int num = 0; num < initNum; ++num) {
+			float newDeltaPW = pixelWidth * c->distribution(c->generator);
+			float newDeltaPH = pixelHeight * c->distribution(c->generator);
+			float y = (1.0 - i * pixelWidth) - newDeltaPW;
+			float z = (line * pixelHeight - 1.0) + newDeltaPH;
+			float x = 0.0;
 
-			color col(0.0);
-			for (int num = 0; num < c->getInitRay(); ++num)
-			{
-				float newDeltaPW = pixelWidth * c->distribution(c->generator);
-				float newDeltaPH = pixelHeight * c->distribution(c->generator);
-				float y = (1.0 - i * pixelWidth) - newDeltaPW;
-				float z = (j * pixelHeight - 1.0) + newDeltaPH;
-				float x = 0.0;
+			vertex s = vertex(c->getCurrentEye()->x, c->getCurrentEye()->y, c->getCurrentEye()->z, 1.0);
+			vertex e = vertex(x, y, z, 1.0);
 
-				vertex s = vertex(c->getCurrentEye()->x, c->getCurrentEye()->y, c->getCurrentEye()->z, 1.0);
-				vertex e = vertex(x, y, z, 1.0);
-
-				//Create ray between eye and pixelplane
-				ray r = ray(s, e);
-				r.setImportance(1.0);
-
-				//cast
-				if (renderAs == PHOTONMAPPING)
-				{
-					//cast photon map ray
-					col += c->photonMapRender(r);
-				}
-				else
-				{
-					col += c->castRay(r, 0);
-				}
-				
-			}
-			col /= (double)c->getInitRay();
-			c->addIntensity(col, thr);
-
-			double m = std::max(std::max(col.x, col.y), col.z);
-			if (m > c->getBrightest(thr) && m < LIGHTWATT / (2.0 * PI * AREA)) //ASUMES WHITE COLORED LIGHT
-				c->setBrightest(m,thr);
-
-			c->setNewMaxIntensity(col, thr);
-			c->setPixelValue(col,i,j);
+			ray r = ray(s, e);
+			col += (renderAs == PHOTONMAPPING) ? c->photonMapRender(r) : c->castRay(r, 0);
 		}
-		
-		c->setPrintReady((i + 1) - dims[0], thr);
-		
-		if (c->isReadyToPrint()) {
-			c->clearConsole();
-			int statuses[4];
-			c->getPrintRows(statuses);
-			c->printContext();
-
-			for (int q = 0; q < 4; ++q) {
-				std::cout << "(Thread " << q << "): " << statuses[q] << " of " << dims[2] - dims[0] << " complete" << std::endl;
-			}
-			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter+1;
-
-		}
+		col /= (double)initNum;
+		c->setPixelValue(col,i,line);
 	}
 }
 
@@ -871,6 +772,51 @@ double camera::sigMoidNormalize(double pixVal, double alpha, double beta)
 {
 	double res = 1.0 / ( 1.0 + std::exp(-((pixVal - beta) / alpha)) );
 	return res;
+}
+
+void multi(camera *c, int thr) {
+	int currentLine = c->getAndUpdateCurrentLine();
+	int MAX = c->getHeight();
+	int cores = std::thread::hardware_concurrency();
+
+	while (currentLine < MAX) {
+		const float pixelWidth = 2.0 / c->getWidth();
+		const float pixelHeight = 2.0 / c->getHeight();
+		const float deltaPW = pixelWidth / 2.0;
+		const float deltaPH = pixelHeight / 2.0;
+		int renderAs = c->getRenderType();
+
+		int width = c->getWidth();
+		int initNum = c->getInitRay();
+		for (int i = 0; i < width; ++i) {
+			color col(0.0);
+			for (int num = 0; num < initNum; ++num) {
+				float newDeltaPW = pixelWidth * c->distribution(c->generator);
+				float newDeltaPH = pixelHeight * c->distribution(c->generator);
+				float y = (1.0 - i * pixelWidth) - newDeltaPW;
+				float z = (currentLine * pixelHeight - 1.0) + newDeltaPH;
+				float x = 0.0;
+
+				vertex s = vertex(c->getCurrentEye()->x, c->getCurrentEye()->y, c->getCurrentEye()->z, 1.0);
+				vertex e = vertex(x, y, z, 1.0);
+
+				ray r = ray(s, e);
+				col += (renderAs == PHOTONMAPPING) ? c->photonMapRender(r) : c->castRay(r, 0);
+			}
+			col /= (double)initNum;
+			c->setPixelValue(col, i, currentLine);
+		}
+
+		//get next line
+		currentLine = c->getAndUpdateCurrentLine();
+
+		//printing
+		if (currentLine % cores == 0 || currentLine == MAX) {
+			c->clearConsole();
+			c->printContext();
+			std::cout << "Progress: " << (currentLine) << " of " << MAX << " rows complete" << std::endl;
+		}
+	}
 }
 
 void camera::render() {
@@ -883,33 +829,33 @@ void camera::render() {
 	int debugCounter = 0;
 
 	if (MODE == SINGLE_THREAD) {
+		
+		if (getRenderType() == PHOTONMAPPING)
+		{
+			generateGlobalPhotonMap();
+			generateCausticPhotonMap();
+		}
+
+		int initNum = getInitRay();
 		for (int i = 0; i < width; i++) {		
 			for (int j = 0; j < height; ++j) {
-				 
+				color c(0.0);
+				for (int n = 0; n < initNum; ++n) {
+					float newDeltaPW = pixelWidth * distribution(generator);
+					float newDeltaPH = pixelHeight * distribution(generator);
+					float y = (1.0 - i * pixelWidth) - newDeltaPW;
+					float z = (j * pixelHeight - 1.0) + newDeltaPH;
+					float x = 0.0;
 
-				float newDeltaPW = pixelWidth * distribution(generator);
-				float newDeltaPH = pixelHeight * distribution(generator);
-				float y = (1.0 - i * pixelWidth) - newDeltaPW;
-				float z = (j * pixelHeight - 1.0) + newDeltaPH;
-				float x = 0.0;
+					vertex s = vertex(currentEye->x, currentEye->y, currentEye->z, 1.0);
+					vertex e = vertex(x, y, z, 1.0);
 
-				vertex s = vertex(currentEye->x, currentEye->y, currentEye->z, 1.0);
-				vertex e = vertex(x, y, z, 1.0);
-
-				//Create ray between eye and pixelplane
-				ray r = ray(s, e);
-				r.setImportance(1.0);
-
-				//cast
-				color c;
-				c = castRay(r, 0);
-
-				double m = std::max(std::max(c.x,c.y),c.z); 
-				
-				if (m > brightest[0]) //&& m < LIGHTWATT) //ASUMES WHITE COLORED LIGHT
-					brightest[0] = m;
-
-				image[i][j].setIntensity(c);
+					//Create ray between eye and pixelplane
+					ray r = ray(s, e);
+					c += (getRenderType() == PHOTONMAPPING) ? photonMapRender(r) : castRay(r, 0);
+				}
+				c /= (double)initNum;
+				setPixelValue(c, i, j);
 			}
 			
 			clearConsole();
@@ -917,80 +863,52 @@ void camera::render() {
 			std::cout << "Progress: " << (i + 1) << " of " << width << " rows complete" << std::endl;
 		 }
 	}
-	else if (MODE == MULTI_THREAD) {
-
-		
-		int hx = width/2;
-		int hy = height/2;
-
-		int a_dims[4] = { 0,0,hx,hy };
-		int b_dims[4] = { hx,0,width,hy };
-		int c_dims[4] = { 0,hy,hx,height };
-		int d_dims[4] = { hx,hy,width,height};
-
+	else if (MODE == MULTI_THREAD) {	
 		std::cout << "Started" << std::endl;
-		
-		int renderAs = getRenderType();
-		
-		if (renderAs == PHOTONMAPPING)
+
+		unsigned cores = std::thread::hardware_concurrency();
+		if (getRenderType() == PHOTONMAPPING)
 		{
-			//generate photon maps 
 			generateGlobalPhotonMap();
 			generateCausticPhotonMap();
 		}
 
-		
 		std::vector<std::thread> pool;
-		pool.emplace_back(std::thread{ multi, this, a_dims, 0 });
-		pool.emplace_back(std::thread{ multi, this, b_dims, 1 });
-		pool.emplace_back(std::thread{ multi, this, c_dims, 2 });
-		pool.emplace_back(std::thread{ multi, this, d_dims, 3 });
-
-		for (auto& t : pool) {
-			t.join();
+		int line = 0;
+		for (unsigned i = 0; i < cores; ++i) {
+			pool.emplace_back(std::thread{ multi, this, i});
 		}
-		
-	}
-	
+		for (auto& t : pool) { t.join(); }
 
+		/*
+		while (line != height) {
+			for (unsigned i = 0; i < cores; ++i) {
+				if (line < height) {
+					pool.emplace_back(std::thread{ old_multi, this, line, i });
+					++line;
+				}
+			}
+			for (auto& t : pool) {t.join();}
+			pool.clear();
+
+			//printing
+			clearConsole();
+			printContext();
+			std::cout << "Progress: " << (line) << " of " << height << " rows complete" << std::endl;
+		}	
+		*/
+
+	}
 	std::cout << "Number of failed pixels: " << debugCounter << std::endl;
-
-	double bMax = std::max(std::max(std::max(brightest[0], brightest[1]), brightest[2]), brightest[3]);
-	//color beta = (intensities[0] + intensities[1] + intensities[2] + intensities[3]) / (double)(width*height);
-	color range = color(0.0);
-	range.x = std::max(std::max(intensityRange[0].x, intensityRange[1].x), std::max(intensityRange[2].x, intensityRange[3].x));
-	range.y = std::max(std::max(intensityRange[0].y, intensityRange[1].y), std::max(intensityRange[2].y, intensityRange[3].y));
-	range.z = std::max(std::max(intensityRange[0].z, intensityRange[1].z), std::max(intensityRange[2].z, intensityRange[3].z));
-	double rangeMAX = std::max(std::max(range.x, range.y), range.z);
-	//double betaMAX = std::max(std::max(beta.x, beta.y), beta.z);
-	//bMax = (bMax + LIGHTWATT) / 2.0;
-	//bMax = LIGHTWATT;
-	//bMax = 1.0;
-	if (rangeMAX < 1.0)
-	{
-		//rangeMAX = 1.0;
-	}
-	std::cout << "Trying whatever normalizer for light..." << std::endl;
-	std::cout << rangeMAX << " " << bMax << std::endl;
 	
 	//Write
 	FILE *f = fopen("out.ppm", "wb");
 	fprintf(f, "P6\n%i %i 255\n", width, height);
 	for (int y = height; y > 0; y--) {
 		for (int x = 0; x < width; x++) {
-
-			
-			//double sigmoidX = std::pow(sigMoidNormalize(image[x][y].getIntensity().x, rangeMAX, rangeMAX / 2.0) ,1.0);
-			//double sigmoidY = std::pow(sigMoidNormalize(image[x][y].getIntensity().y, rangeMAX, rangeMAX / 2.0), 1.0);
-			//double sigmoidZ = std::pow(sigMoidNormalize(image[x][y].getIntensity().z, rangeMAX, rangeMAX / 2.0), 1.0);
 			fputc(std::pow(std::min((image[x][y].getIntensity().x), 1.0), 0.5) * 255, f);   // 0 .. 255
 			fputc(std::pow(std::min((image[x][y].getIntensity().y), 1.0), 0.5) * 255, f); // 0 .. 255
 			fputc(std::pow(std::min((image[x][y].getIntensity().z), 1.0), 0.5) * 255, f);  // 0 .. 255
-
-
-			//fputc(sigmoidX * 255, f);   // 0 .. 255
-			//fputc(sigmoidY * 255, f); // 0 .. 255
-			//fputc(sigmoidZ * 255, f);  // 0 .. 255
 		}
 	}
 	fclose(f);
@@ -1026,17 +944,12 @@ bool camera::refract(const std::pair<glm::vec3, std::pair<object*, triangle*>>& 
 	glm::vec3 dirIn = glm::normalize(intersection.first - (glm::vec3)r.getStartVec());
 
 	float thetaIN = glm::angle(oppositeDir, normal);
-	//glm::vec3 rayDir = glm::normalize(r.getEndVec() - r.getStartVec());
-	//if (glm::distance(intersection.first + 0.0001f * rayDir, intersection.second.first->getPosition())
-	//	< intersection.second.first->getRadius())
-	if (std::fabs(thetaIN) >= (float)PI / 2.0f)
+	if (std::fabs(thetaIN) >= (float)PI / 2.0f) //inside sphere
 	{
-		//inside sphere
 		std::swap(n1, n2);
 		normal *= -1.0f;
 		thetaIN = glm::angle(oppositeDir, normal);
 	}
-
 
 	float R0 = std::powf(((n1 - n2) / (n1 + n2)), 2.0f);
 	float R = R0 + (1 - R0)* std::powf(1 - cosf(thetaIN), 5.0f);
@@ -1060,12 +973,12 @@ bool camera::refract(const std::pair<glm::vec3, std::pair<object*, triangle*>>& 
 	}
 	ratio = n1 / n2;
 
-
 	glm::vec3 reflectDir = glm::reflect(dirIn, normal);
 	glm::vec3 refractDir = glm::refract(dirIn, normal, ratio); //hmm?
 
 	vertex startPtReflect = vertex(intersection.first + reflectDir * 0.1f, 1.0f);
 	vertex startPtRefract = vertex(intersection.first + refractDir * 0.01f, 1.0f);
+	
 	//for reflection
 	vertex endPtReflect = vertex(intersection.first, 1.0f) + vertex(reflectDir, 1.0f);
 	vertex endPtRefract = vertex(intersection.first, 1.0f) + vertex(refractDir, 1.0f);
@@ -1080,6 +993,7 @@ bool camera::refract(const std::pair<glm::vec3, std::pair<object*, triangle*>>& 
 }
 
 void multiGenerate(camera *c , int d, int t, int thr) {
+	unsigned cores = (c->MODE == SINGLE_THREAD) ? 1 : std::thread::hardware_concurrency();
 	for (int i = 0; i < d; ++i) {
 		float u = c->distribution(c->generator);
 		float v = c->distribution(c->generator);
@@ -1092,7 +1006,8 @@ void multiGenerate(camera *c , int d, int t, int thr) {
 		glm::vec3 localPoint = sampleHemisphere(uHemi, vHemi);
 		glm::vec3 outDir = glm::normalize(-localPoint);	//Assumes lightsource in 
 		glm::vec3 worldPoint = lightPos + outDir; // Get world point
-		//create ray
+		
+												  //create ray
 		vertex startPoint = vertex(lightPos, 1.0f);
 		vertex endPoint = vertex(worldPoint, 1.0f);
 		ray r(startPoint, endPoint);
@@ -1107,44 +1022,33 @@ void multiGenerate(camera *c , int d, int t, int thr) {
 		if (t == GLOBAL && (i+1) % (int)floor(d / (10)) == 0 && (c->threadPrinter == thr)) {
 			c->clearConsole();
 			std::cout << "(GLOBAL) Emitting " << c->globalNr << " Photons" << std::endl;
-			for (int q = 0; q < 4; ++q) {
+			for (int q = 0; q < cores; ++q) {
 				std::cout << "Thread (" << q << "): " << (i + 1) << " of " << d << " done" << std::endl;
 			}
-			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter+1;
+			c->threadPrinter = (c->threadPrinter >= (cores-1)) ? 0 : c->threadPrinter+1;
 		}
 		if (t == CAUSTIC && (i + 1) % (int)floor(d / (10)) == 0 && (c->threadPrinter == thr)) {
 			c->clearConsole();
 			std::cout << "(CAUSTIC) Emitting " << c->causticNr << " Photons" << std::endl;
-			for (int q = 0; q < 4; ++q) {
+			for (int q = 0; q < cores; ++q) {
 				std::cout << "Thread (" << q << "): " << (i + 1) << " of " << d << " done" << std::endl;
 			}
-			c->threadPrinter = (c->threadPrinter >= 3) ? 0 : c->threadPrinter + 1;
+			c->threadPrinter = (c->threadPrinter >= (cores-1)) ? 0 : c->threadPrinter + 1;
 		}
 	}
 }
 
-void camera::merge(std::vector<photon>& v) {
-	int x, y, z;
-	for (auto it = v.begin(); it != v.end(); ++it) {
-		x = static_cast<int>(round(it->startPoint.x)) + offsetVec.x;
-		y = static_cast<int>(round(it->startPoint.y)) + offsetVec.y;
-		z = static_cast<int>(round(it->startPoint.z)) + offsetVec.z;
-		std::vector<photon> photons = globalMap.at(x, y, z);
-		photons.push_back(*it);
-		globalMap(x, y, z) = photons;
-	}
-}
 
 void camera::generateGlobalPhotonMap()
 {
-	
-	int delta = (int)floor(globalNr / 4);
+	unsigned cores = (MODE == SINGLE_THREAD) ? 1 : std::thread::hardware_concurrency();
+	int delta = (int)floor(globalNr / cores);
 	
 	std::vector<std::thread> pool;
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 0 });
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 1 });
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 2 });
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, 3 });
+
+	for (unsigned i = 0; i < cores; ++i) {
+		pool.emplace_back(std::thread{ multiGenerate, this, delta, GLOBAL, i});
+	}
 
 	for (auto& t : pool) {
 		t.join();
@@ -1160,19 +1064,20 @@ void camera::generateGlobalPhotonMap()
 			}
 		}
 	}
-	std::cout << std::endl << "Number of Global Photons stored: " << size << std::endl << std::endl;
+	storedGlobal = size;
 	
 }
 
 void camera::generateCausticPhotonMap()
 {
-	int delta = (int)floor(causticNr / 4);
+	unsigned cores = (MODE == SINGLE_THREAD) ? 1 : std::thread::hardware_concurrency();
+	int delta = (int)floor(causticNr / cores);
 
 	std::vector<std::thread> pool;
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 0 });
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 1 });
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 2 });
-	pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, 3 });
+
+	for (unsigned i = 0; i < cores; ++i) {
+		pool.emplace_back(std::thread{ multiGenerate, this, delta, CAUSTIC, i });
+	}
 
 	for (auto& t : pool) {
 		t.join();
@@ -1186,13 +1091,10 @@ void camera::generateCausticPhotonMap()
 			for (int k = 0; k < 32; ++k) {
 				std::vector<photon> v = causticMap.at(i, j, k);
 				size += v.size();
-				std::vector<photon> v2 = globalMap.at(i, j, k);
-				size2 += v2.size();
 			}
 		}
 	}
-	std::cout << std::endl << "Number of Global Photons stored: " << size2 << std::endl;
-	std::cout << std::endl << "Number of caustic Photons stored: " << size << std::endl << std::endl;
+	storedCaustic = size;
 }
 
 void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
@@ -1210,6 +1112,15 @@ void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
 		photons.push_back(newPhoton);
 	}
 	OCT_MUTEX.unlock();
+}
+
+int camera::getAndUpdateCurrentLine()
+{
+	LINE_MUTEX.lock();
+	int L = currentLine;
+	++currentLine;
+	LINE_MUTEX.unlock();
+	return L;
 }
 
 void camera::bouncePhoton(ray & r, int depth, int TYPE)

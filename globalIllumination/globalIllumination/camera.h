@@ -22,7 +22,6 @@ public:
 	camera(std::vector<object*> ol);
 	~camera();
 
-	void switchEye(glm::vec3 & e);
 	triangle getLightSource();
 	void getLocalCoordSystem(const glm::vec3 &Z, const glm::vec3 &I, glm::vec3 &X, glm::vec3 &Y);
 	glm::vec3 localToWorld(const glm::vec3 &X, const glm::vec3 &Y, const glm::vec3 &Z, const glm::vec3 & v, const glm::vec3 &t);
@@ -31,22 +30,14 @@ public:
 	void setShadowRays(int n);
 	void setDepth(int d);
 	double sigMoidNormalize(double pixVal, double range, double beta);
-	int getWidht();
+	int getWidth();
 	int getHeight();
 	const glm::vec3* getCurrentEye();
 	void setPixelValue(color c, int i, int j);
-	double getBrightest(int i);
-	void setBrightest(int v, int i);
 	void setRenderingMode(int mode);
 	void clearConsole();
-	void setPrintReady(int row, int i);
-	bool isReadyToPrint();
-	void getPrintRows(int toReturn[4]);
 	void setRenderType(int type);
-	void clearReadyToPrint();
 	void printContext();
-	void addIntensity(glm::dvec3 val, int th);
-	void setNewMaxIntensity(glm::dvec3 val, int th);
 	std::pair<glm::vec3, std::pair<object*, triangle*>> findClosestIntersection(ray &r);
 	color castRay(ray &r, int depth);
 	color photonMapRender(ray &r);
@@ -55,9 +46,10 @@ public:
 	int getInitRay();
 	void generateGlobalPhotonMap();
 	void generateCausticPhotonMap();
-	void merge(std::vector<photon>& v);
 	void bouncePhoton(ray &r, int depth, int TYPE);
 	void addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float flux);
+
+	int getAndUpdateCurrentLine();
 
 	ray mirror(const std::pair<glm::vec3, std::pair<object*, triangle*>> &intersection, ray r, glm::vec3 normal);
 	bool refract(const std::pair<glm::vec3, std::pair<object*, triangle*>> &intersection, ray r, glm::vec3 normal, 
@@ -73,14 +65,18 @@ public:
 	Octree<std::vector<photon>> globalMap;
 
 	int threadPrinter = 0;
+	int storedGlobal;
+	int storedCaustic;
 
+	const static int globalNr = 10000;
+	const static int causticNr = 60000;
+	int MODE = SINGLE_THREAD;
 
-	const static int globalNr = 3000000;
-	const static int causticNr = 16000000;
+	
 private:
 	void findLightSource();
-	const static int width = 400;
-	const static int height = 400;
+	const static int width = 100;
+	const static int height = 100;
 	const static int boxSize = 32;
 	
 	const glm::vec3 * currentEye;
@@ -91,21 +87,16 @@ private:
 	pixel image[width][height] = { pixel() };
 	std::vector<object*> objects;
 	triangle light;
-
-	double brightest[4] = { 1.0, 1.0, 1.0, 1.0 };
-	glm::dvec3 intensities[4] = { glm::dvec3(0.0) };
-	glm::dvec3 intensityRange[4] = { glm::dvec3(0.0) };
-	std::pair<bool, int> timeToPrint[4] = { std::pair<bool,int>(false,0) };
 	
 	int FACTOR = 1;
 	int SHADOWRAYS = 1;
 	int MAXDEPTH = 1;
 	int initRAY = 1;
 	int renderType;
-	int MODE = SINGLE_THREAD;
+
+	int currentLine = 0;
 
 	std::mutex OCT_MUTEX;
-
-	
+	std::mutex LINE_MUTEX;
 };
 

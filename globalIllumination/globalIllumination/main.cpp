@@ -101,20 +101,22 @@ int main(int, char*[])
 	polyModel scene = createScene();
 	polyModel tetra = createTetra();
 
-	//implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), REFRACT, 1.0);
+	implicitModel sphere(1.5f, glm::vec3(6.0f, 2.0f, -3.4f), REFRACT, 1.0);
 	implicitModel s1(1.5f, glm::vec3(6.0f, 2.0f, 3.0f), REFRACT, 1.0, color(1.0,1.0,1.0)); 
-	//implicitModel s2(1.0f, glm::vec3(5.0f, -1.0f, 1.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0)); 
+	implicitModel s2(1.0f, glm::vec3(5.0f, -1.0f, 1.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0)); 
 	implicitModel s3(2.0f, glm::vec3(10.0f, 0.0f, -1.0f), MIRROR, 1.0, color(1.0, 1.0, 1.0)); 
-	//implicitModel sphere(1.5f, glm::vec3(5.0f, -2.0f, 0.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0));
+	implicitModel s4(1.5f, glm::vec3(5.0f, -2.0f, 0.0f), REFRACT, 1.0, color(1.0, 1.0, 1.0));
 	lightSource light(0.5f, glm::vec3(5.0f, 0.0f, 4.8f));
 	
 	
 	objectList.push_back(&scene);
+	//objectList.push_back(&sphere);
 	objectList.push_back(&s1);
 	//objectList.push_back(&s2);
 	objectList.push_back(&s3);
-	//objectList.push_back(&sphere);
+	//objectList.push_back(&s4);
 	objectList.push_back(&tetra);
+	
 	objectList.push_back(&light);
 
 	camera *cam = new camera(objectList);
@@ -122,9 +124,9 @@ int main(int, char*[])
 	cam->setRenderingMode(MULTI_THREAD);
 	cam->setRenderType(PHOTONMAPPING);
 	cam->setBranchFactor(1);
-	cam->setShadowRays(4);
+	cam->setShadowRays(1);
 	cam->setDepth(20); 
-	cam->setInitRay(4);
+	cam->setInitRay(1);
 	
 
 	//STUFF
