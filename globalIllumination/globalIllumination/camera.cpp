@@ -484,57 +484,44 @@ color camera::photonMapRender(ray & r)
 	color directLight = (rho * (double)LIGHTWATT * color(lightHits, lightHits, lightHits)) / ((double)SHADOWRAYS*2.0*(double)PI);
 	if (intersection.second.first->getSurfProperty() == DIFFUSE || intersection.second.first->getSurfProperty() == ORENNAYAR)
 	{
-		float r0Caustic = 0.1f*0.1f;
-		float r0Global = 0.4f*0.4f;
+		float r0Caustic = 0.08f;
+		float r0Global = 0.3f;
+		float r02Caustic = r0Caustic * r0Caustic;
+		float r02Global = r0Global * r0Global;
 		float radiance = 0.0f;
 
-		int Gxm, Gxe, Gym, Gye, Gzm, Gze;
-		int Cxm, Cxe, Cym, Cye, Czm, Cze;
-
-		Gxm = static_cast<int>(round(intersection.first.x - r0Global)) + offsetVec.x;
-		Gxe = static_cast<int>(round(intersection.first.x + r0Global)) + offsetVec.x;
-		Gym = static_cast<int>(round(intersection.first.y - r0Global)) + offsetVec.y;
-		Gye = static_cast<int>(round(intersection.first.y + r0Global)) + offsetVec.y;
-		Gzm = static_cast<int>(round(intersection.first.z - r0Global)) + offsetVec.z;
-		Gze = static_cast<int>(round(intersection.first.z + r0Global)) + offsetVec.z;
-		Cxm = static_cast<int>(round(intersection.first.x - r0Caustic)) + offsetVec.x;
-		Cxe = static_cast<int>(round(intersection.first.x + r0Caustic)) + offsetVec.x;
-		Cym = static_cast<int>(round(intersection.first.y - r0Caustic)) + offsetVec.y;
-		Cye = static_cast<int>(round(intersection.first.y + r0Caustic)) + offsetVec.y;
-		Czm = static_cast<int>(round(intersection.first.z - r0Caustic)) + offsetVec.z;
-		Cze = static_cast<int>(round(intersection.first.z + r0Caustic)) + offsetVec.z;
+		int xm, xe, ym, ye, zm, ze;
+		xm = static_cast<int>(round(intersection.first.x - r0Global)) + offsetVec.x;
+		xe = static_cast<int>(round(intersection.first.x + r0Global)) + offsetVec.x;
+		ym = static_cast<int>(round(intersection.first.y - r0Global)) + offsetVec.y;
+		ye = static_cast<int>(round(intersection.first.y + r0Global)) + offsetVec.y;
+		zm = static_cast<int>(round(intersection.first.z - r0Global)) + offsetVec.z;
+		ze = static_cast<int>(round(intersection.first.z + r0Global)) + offsetVec.z;
 
 		
-		for (int i = Gxm; i <= Gxe; ++i) {
-			for (int j = Gym; j <= Gye; ++j) {
-				for (int k = Gzm; k <= Gze; ++k) {
+		for (int i = xm; i <= xe; ++i) {
+			for (int j = ym; j <= ye; ++j) {
+				for (int k = zm; k <= ze; ++k) {
 					std::vector<photon> &currentPhotonsGlobal = globalMap(i, j, k);
+					std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
 					for (photon p : currentPhotonsGlobal)
 					{
 						float dist = glm::distance(intersection.first, p.startPoint);
 						if (dist < r0Global)
-							radiance += (rho * p.flux) / ((float)PI * dist);
+							radiance += (rho * p.flux) / ((float)PI * r02Global);
 					}
-				}
-			}
-		}
-
-		for (int i = Cxm; i <= Cxe; ++i) {
-			for (int j = Cym; j <= Cye; ++j) {
-				for (int k = Czm; k <= Cze; ++k) {
-					std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
 					for (photon p : currentPhotonsCaustic)
 					{
 						float dist = glm::distance(intersection.first, p.startPoint);
 						if (dist < r0Caustic)
-							radiance += (rho * p.flux) / ((float)PI * dist);
+							radiance += (rho * p.flux) / ((float)PI * r02Caustic);
 					}
 				}
 			}
 		}
 		
-		//color indirLight = calcIndirectLight(r, 0);
-		return c * ((double)radiance + directLight);
+		color indirLight = calcIndirectLight(r, 0);
+		return c * (((double)radiance) + indirLight);
 	}
 	else if (intersection.second.first->getSurfProperty() == REFRACT)
 	{
@@ -610,31 +597,36 @@ color camera::calcIndirectLight(ray & r, int depth)
 		: intersection.second.second->getNormal();
 
 	
-	if (depth > 0 && (depth >= MAXDEPTH || russianRoulette >= 0.2f)) { //max depth 20
-		float r0Global = 0.5f*0.5f;
-		int x = static_cast<int>(round(intersection.first.x)) + offsetVec.x;
-		int y = static_cast<int>(round(intersection.first.y)) + offsetVec.y;
-		int z = static_cast<int>(round(intersection.first.z)) + offsetVec.z;
+	if (depth > 0 && (depth >= MAXDEPTH || russianRoulette >= 0.4f)) { //max depth 20
+		float r0Global = 0.3f;
+		float r02Global = r0Global * r0Global;
 		float radiance = 0.0f;
-		for (int i = -1; i < 2; ++i)
-		{
-			for (int j = -1; j < 2; ++j)
-			{
-				for (int k = -1; k < 2; ++k)
-				{
-					std::vector<photon> &currentPhotonsGlobal = globalMap(x + i, y + j, z + k);
+
+		int xm, xe, ym, ye, zm, ze;
+		xm = static_cast<int>(round(intersection.first.x - r0Global)) + offsetVec.x;
+		xe = static_cast<int>(round(intersection.first.x + r0Global)) + offsetVec.x;
+		ym = static_cast<int>(round(intersection.first.y - r0Global)) + offsetVec.y;
+		ye = static_cast<int>(round(intersection.first.y + r0Global)) + offsetVec.y;
+		zm = static_cast<int>(round(intersection.first.z - r0Global)) + offsetVec.z;
+		ze = static_cast<int>(round(intersection.first.z + r0Global)) + offsetVec.z;
+
+		for (int i = xm; i <= xe; ++i) {
+			for (int j = ym; j <= ye; ++j) {
+				for (int k = zm; k <= ze; ++k) {
+					std::vector<photon> &currentPhotonsGlobal = globalMap(i, j, k);
+					std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
 					for (photon p : currentPhotonsGlobal)
 					{
 						float dist = glm::distance(intersection.first, p.startPoint);
 						if (dist < r0Global)
-						{
-							radiance += (rho * p.flux) / ((float)PI * dist);
-						}
+							radiance += (rho * p.flux) / ((float)PI * r02Global);
 					}
 				}
 			}
 		}
-		return (color(1.0, 1.0, 1.0)) / (2.0*PI);
+
+		double angle = glm::dot(normal, glm::normalize((glm::vec3)r.getEndVec() - intersection.first));
+		return angle*(color(radiance) * c) / (2.0*PI);
 	}
 	else {
 		//recursive call
@@ -921,9 +913,9 @@ void camera::render() {
 	fprintf(f, "P6\n%i %i 255\n", width, height);
 	for (int y = height; y > 0; y--) {
 		for (int x = 0; x < width; x++) {
-			fputc(std::pow(std::min((image[x][y].getIntensity().x), 1.0), 0.5) * 255, f);   // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().y), 1.0), 0.5) * 255, f); // 0 .. 255
-			fputc(std::pow(std::min((image[x][y].getIntensity().z), 1.0), 0.5) * 255, f);  // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().x / (double)2.0), 1.0), 0.5) * 255, f);   // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().y / (double)2.0), 1.0), 0.5) * 255, f); // 0 .. 255
+			fputc(std::pow(std::min((image[x][y].getIntensity().z / (double)2.0), 1.0), 0.5) * 255, f);  // 0 .. 255
 		}
 	}
 	fclose(f);

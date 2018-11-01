@@ -68,8 +68,8 @@ public:
 	int storedGlobal;
 	int storedCaustic;
 
-	const static int globalNr = 500000;
-	const static int causticNr = 1000000;
+	const static int globalNr = 50000;
+	const static int causticNr = 150000;
 	int MODE = SINGLE_THREAD;
 
 	
