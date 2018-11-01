@@ -486,38 +486,53 @@ color camera::photonMapRender(ray & r)
 	{
 		float r0Caustic = 0.1f*0.1f;
 		float r0Global = 0.4f*0.4f;
-		int x = static_cast<int>(round(intersection.first.x)) + offsetVec.x;
-		int y = static_cast<int>(round(intersection.first.y)) + offsetVec.y;
-		int z = static_cast<int>(round(intersection.first.z)) + offsetVec.z;
 		float radiance = 0.0f;
-		for (int i = -1; i < 2; ++i)
-		{
-			for (int j = -1; j < 2; ++j)
-			{
-				for (int k = -1; k < 2; ++k)
-				{
-					std::vector<photon> &currentPhotonsCaustic = causticMap(x+i,y+j,z+k);
-					std::vector<photon> &currentPhotonsGlobal = globalMap(x + i, y + j, z + k);
-					for (photon p : currentPhotonsCaustic)
-					{
-						float dist = glm::distance(intersection.first, p.startPoint);
-						if (dist < r0Caustic)
-						{
-							radiance += (rho * p.flux) / ((float)PI * dist);
-						}
-						
-					}
+
+		int Gxm, Gxe, Gym, Gye, Gzm, Gze;
+		int Cxm, Cxe, Cym, Cye, Czm, Cze;
+
+		Gxm = static_cast<int>(round(intersection.first.x - r0Global)) + offsetVec.x;
+		Gxe = static_cast<int>(round(intersection.first.x + r0Global)) + offsetVec.x;
+		Gym = static_cast<int>(round(intersection.first.y - r0Global)) + offsetVec.y;
+		Gye = static_cast<int>(round(intersection.first.y + r0Global)) + offsetVec.y;
+		Gzm = static_cast<int>(round(intersection.first.z - r0Global)) + offsetVec.z;
+		Gze = static_cast<int>(round(intersection.first.z + r0Global)) + offsetVec.z;
+		Cxm = static_cast<int>(round(intersection.first.x - r0Caustic)) + offsetVec.x;
+		Cxe = static_cast<int>(round(intersection.first.x + r0Caustic)) + offsetVec.x;
+		Cym = static_cast<int>(round(intersection.first.y - r0Caustic)) + offsetVec.y;
+		Cye = static_cast<int>(round(intersection.first.y + r0Caustic)) + offsetVec.y;
+		Czm = static_cast<int>(round(intersection.first.z - r0Caustic)) + offsetVec.z;
+		Cze = static_cast<int>(round(intersection.first.z + r0Caustic)) + offsetVec.z;
+
+		
+		for (int i = Gxm; i <= Gxe; ++i) {
+			for (int j = Gym; j <= Gye; ++j) {
+				for (int k = Gzm; k <= Gze; ++k) {
+					std::vector<photon> &currentPhotonsGlobal = globalMap(i, j, k);
 					for (photon p : currentPhotonsGlobal)
 					{
 						float dist = glm::distance(intersection.first, p.startPoint);
 						if (dist < r0Global)
-						{
 							radiance += (rho * p.flux) / ((float)PI * dist);
-						}
 					}
 				}
 			}
 		}
+
+		for (int i = Cxm; i <= Cxe; ++i) {
+			for (int j = Cym; j <= Cye; ++j) {
+				for (int k = Czm; k <= Cze; ++k) {
+					std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
+					for (photon p : currentPhotonsCaustic)
+					{
+						float dist = glm::distance(intersection.first, p.startPoint);
+						if (dist < r0Caustic)
+							radiance += (rho * p.flux) / ((float)PI * dist);
+					}
+				}
+			}
+		}
+		
 		//color indirLight = calcIndirectLight(r, 0);
 		return c * ((double)radiance + directLight);
 	}

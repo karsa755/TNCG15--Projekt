@@ -68,15 +68,15 @@ public:
 	int storedGlobal;
 	int storedCaustic;
 
-	const static int globalNr = 10000;
-	const static int causticNr = 60000;
+	const static int globalNr = 500000;
+	const static int causticNr = 1000000;
 	int MODE = SINGLE_THREAD;
 
 	
 private:
 	void findLightSource();
-	const static int width = 100;
-	const static int height = 100;
+	const static int width = 200;
+	const static int height = 200;
 	const static int boxSize = 32;
 	
 	const glm::vec3 * currentEye;
