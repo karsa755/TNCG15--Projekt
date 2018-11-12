@@ -17,6 +17,7 @@ polyModel createScene()
 	double wallRho = 1.0;
 	double lightWallRho = 1.0;
 	double maxRho = 1.0;
+	double topRho = 1.0;
 	roofVertices[0] = vertex(0.0f, 6.0f, 5.0f, 1.0f);
 	roofVertices[1] = vertex(-3.0f, 0.0f, 5.0f, 1.0f);
 	roofVertices[2] = vertex(0.0f, -6.0f, 5.0f, 1.0f);
@@ -37,10 +38,10 @@ polyModel createScene()
 	//light source
 	//sceneList.push_back(triangle(lightVerts[1], lightVerts[0], lightVerts[2], 1.0, color(0.0, 0.0, 0.0), true)); //5.5 och 4.5 innan
 
-	sceneList.push_back(triangle(roofVertices[0], roofVertices[2], roofVertices[1], maxRho,color(1.0, 1.0, 1.0)));
-	sceneList.push_back(triangle(roofVertices[0], roofVertices[5], roofVertices[2], maxRho, color(1.0, 1.0, 1.0)));
-	sceneList.push_back(triangle(roofVertices[0], roofVertices[3], roofVertices[5], maxRho, color(1.0, 1.0, 1.0)));
-	sceneList.push_back(triangle(roofVertices[3], roofVertices[4], roofVertices[5], maxRho, color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(roofVertices[0], roofVertices[2], roofVertices[1], topRho,color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(roofVertices[0], roofVertices[5], roofVertices[2], topRho, color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(roofVertices[0], roofVertices[3], roofVertices[5], topRho, color(1.0, 1.0, 1.0)));
+	sceneList.push_back(triangle(roofVertices[3], roofVertices[4], roofVertices[5], topRho, color(1.0, 1.0, 1.0)));
 	//floor triangles
 	sceneList.push_back(triangle(floorVertices[0], floorVertices[1], floorVertices[2], maxRho, color(1.0, 1.0, 1.0)));
 	sceneList.push_back(triangle(floorVertices[0], floorVertices[2], floorVertices[5], maxRho, color(1.0, 1.0, 1.0)));
@@ -126,7 +127,7 @@ int main(int, char*[])
 	cam->setBranchFactor(1);
 	cam->setShadowRays(1);
 	cam->setDepth(20); 
-	cam->setInitRay(1);
+	cam->setInitRay(8);
 	
 
 	//STUFF

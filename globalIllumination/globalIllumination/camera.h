@@ -48,7 +48,8 @@ public:
 	void generateCausticPhotonMap();
 	void bouncePhoton(ray &r, int depth, int TYPE);
 	void addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float flux);
-
+	float globalEstimate(glm::vec3 intersection, double rho);
+	float causticEstimate(glm::vec3 intersection, double rho);
 	int getAndUpdateCurrentLine();
 
 	ray mirror(const std::pair<glm::vec3, std::pair<object*, triangle*>> &intersection, ray r, glm::vec3 normal);

@@ -240,6 +240,7 @@ std::pair<glm::vec3, std::pair<object*, triangle*>> camera::findClosestIntersect
 color camera::castRay(ray &r, int depth) {
 
 	//find closest intersection
+	float P = 0.2f;
 	auto intersection = findClosestIntersection(r);
 	std::vector<glm::vec3> lightSamples;
 	int N = FACTOR;
@@ -303,9 +304,10 @@ color camera::castRay(ray &r, int depth) {
 	
 
 	//if(depth >= MAXDEPTH) {
-	if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= 0.2f) ) { //max depth 20
+	if (depth > 0 &&  (depth >= MAXDEPTH || russianRoulette >= P) ) { //max depth 20
 
-		return (((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
+		//return (((rho)*(double)LIGHTWATT *color(lightHits, lightHits, lightHits))  / ( 2.0 * (double)PI * (double)AREA * (double)SHADOWRAYS));
+		return color(0.0, 0.0, 0.0);
 	}
 	else {
 		//recursive call
@@ -331,16 +333,16 @@ color camera::castRay(ray &r, int depth) {
 				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
 
 				glm::vec3 directionWorld = glm::normalize(worldSample - intersection.first);
-
+				float newAngle = glm::dot(directionWorld, Z);
 				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
-				finalColor += (double)cosTheta * castRay(outRay, depth + 1);
+				finalColor += (rho * (double)newAngle * castRay(outRay, depth + 1)) / PDF;
 			}
-			finalColor /= ((double)N * PDF);
+			finalColor /= ((double)N);
 			color dirLight = { lightHits, lightHits, lightHits };
 
-			color finC = rho * ( ( ((double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*(double)AREA*2.0*(double)PI)) + (finalColor) ) * c;
+			color finC = ( ( (rho * (double)LIGHTWATT * dirLight) / ((double)SHADOWRAYS*2.0*(double)PI)) + (finalColor) ) * c;
 			return finC;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
@@ -481,47 +483,13 @@ color camera::photonMapRender(ray & r)
 		}
 	}
 	
-	color directLight = (rho * (double)LIGHTWATT * color(lightHits, lightHits, lightHits)) / ((double)SHADOWRAYS*2.0*(double)PI);
+	color directLight = ((double)LIGHTWATT * color(lightHits, lightHits, lightHits)) / (AREA*(double)SHADOWRAYS*2.0*(double)PI);
 	if (intersection.second.first->getSurfProperty() == DIFFUSE || intersection.second.first->getSurfProperty() == ORENNAYAR)
 	{
-		float r0Caustic = 0.08f;
-		float r0Global = 0.3f;
-		float r02Caustic = r0Caustic * r0Caustic;
-		float r02Global = r0Global * r0Global;
-		float radiance = 0.0f;
-
-		int xm, xe, ym, ye, zm, ze;
-		xm = static_cast<int>(round(intersection.first.x - r0Global)) + offsetVec.x;
-		xe = static_cast<int>(round(intersection.first.x + r0Global)) + offsetVec.x;
-		ym = static_cast<int>(round(intersection.first.y - r0Global)) + offsetVec.y;
-		ye = static_cast<int>(round(intersection.first.y + r0Global)) + offsetVec.y;
-		zm = static_cast<int>(round(intersection.first.z - r0Global)) + offsetVec.z;
-		ze = static_cast<int>(round(intersection.first.z + r0Global)) + offsetVec.z;
-
-		
-		for (int i = xm; i <= xe; ++i) {
-			for (int j = ym; j <= ye; ++j) {
-				for (int k = zm; k <= ze; ++k) {
-					std::vector<photon> &currentPhotonsGlobal = globalMap(i, j, k);
-					std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
-					for (photon p : currentPhotonsGlobal)
-					{
-						float dist = glm::distance(intersection.first, p.startPoint);
-						if (dist < r0Global)
-							radiance += (rho * p.flux) / ((float)PI * r02Global);
-					}
-					for (photon p : currentPhotonsCaustic)
-					{
-						float dist = glm::distance(intersection.first, p.startPoint);
-						if (dist < r0Caustic)
-							radiance += (rho * p.flux) / ((float)PI * r02Caustic);
-					}
-				}
-			}
-		}
-		
+	
+		float radiance = causticEstimate(intersection.first, rho);
 		color indirLight = calcIndirectLight(r, 0);
-		return c * (((double)radiance) + indirLight);
+		return c*directLight + ( (c* (double)radiance) + indirLight);
 	}
 	else if (intersection.second.first->getSurfProperty() == REFRACT)
 	{
@@ -559,12 +527,15 @@ color camera::photonMapRender(ray & r)
 	}
 }
 
+
+
 color camera::calcIndirectLight(ray & r, int depth)
 {
 	//find closest intersection
 	auto intersection = findClosestIntersection(r);
 	int N = FACTOR;
 	double rho;
+	float P = 0.8f;
 	if (intersection.second.first->isImplicit())
 	{
 		rho = intersection.second.first->getRho() / PI;
@@ -596,40 +567,16 @@ color camera::calcIndirectLight(ray & r, int depth)
 		((intersection.first - intersection.second.first->getPosition()) / intersection.second.first->getRadius())
 		: intersection.second.second->getNormal();
 
-	
-	if (depth > 0 && (depth >= MAXDEPTH || russianRoulette >= 0.4f)) { //max depth 20
-		float r0Global = 0.3f;
-		float r02Global = r0Global * r0Global;
-		float radiance = 0.0f;
+	float radiance = globalEstimate(intersection.first, rho);
 
-		int xm, xe, ym, ye, zm, ze;
-		xm = static_cast<int>(round(intersection.first.x - r0Global)) + offsetVec.x;
-		xe = static_cast<int>(round(intersection.first.x + r0Global)) + offsetVec.x;
-		ym = static_cast<int>(round(intersection.first.y - r0Global)) + offsetVec.y;
-		ye = static_cast<int>(round(intersection.first.y + r0Global)) + offsetVec.y;
-		zm = static_cast<int>(round(intersection.first.z - r0Global)) + offsetVec.z;
-		ze = static_cast<int>(round(intersection.first.z + r0Global)) + offsetVec.z;
+	double angle = glm::dot(normal, glm::normalize((glm::vec3)r.getEndVec() - intersection.first));
 
-		for (int i = xm; i <= xe; ++i) {
-			for (int j = ym; j <= ye; ++j) {
-				for (int k = zm; k <= ze; ++k) {
-					std::vector<photon> &currentPhotonsGlobal = globalMap(i, j, k);
-					std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
-					for (photon p : currentPhotonsGlobal)
-					{
-						float dist = glm::distance(intersection.first, p.startPoint);
-						if (dist < r0Global)
-							radiance += (rho * p.flux) / ((float)PI * r02Global);
-					}
-				}
-			}
-		}
-
-		double angle = glm::dot(normal, glm::normalize((glm::vec3)r.getEndVec() - intersection.first));
-		return angle*(color(radiance) * c) / (2.0*PI);
+	if (depth > 0) { //max depth 20
+		return (rho*color(radiance)*c ) / ( 2.0*PI);
 	}
 	else {
 		//recursive call
+		float radiance = globalEstimate(intersection.first, rho);
 		glm::vec3 X(0.0f);
 		glm::vec3 Y(0.0f);
 		glm::vec3 I = glm::normalize((glm::vec3)r.getStartVec() - (glm::vec3)r.getEndVec());
@@ -652,13 +599,14 @@ color camera::calcIndirectLight(ray & r, int depth)
 				glm::vec3 worldSample = localToWorld(X, Y, Z, sample, intersection.first);
 
 				glm::vec3 directionWorld = glm::normalize(worldSample - intersection.first);
-
+				float newAngle = glm::dot(directionWorld, normal);
 				vertex v1 = vertex(intersection.first + directionWorld * 0.00001f, 1.0f);
 				vertex v2 = vertex(worldSample, 1.0f);
 				ray outRay(v1, v2);
-				finalColor += (double)cosTheta * calcIndirectLight(outRay, depth + 1) * rho;
+				
+				finalColor += (double)newAngle * calcIndirectLight(outRay, depth + 1) * rho / PDF;
 			}
-			finalColor /= ((double)N * PDF);
+			finalColor /= ((double)N);
 			return c * finalColor;
 		}
 		else if (intersection.second.first->getSurfProperty() == MIRROR)
@@ -1119,6 +1067,69 @@ void camera::addToMap(int TYPE, glm::vec3 pos, glm::vec3 dir, float f) {
 		photons.push_back(newPhoton);
 	}
 	OCT_MUTEX.unlock();
+}
+
+float camera::globalEstimate(glm::vec3 intersection, double rho)
+{
+	float r0Global = 0.3f;
+	float r02Global = r0Global * r0Global;
+	float radiance = 0.0f;
+
+	int xm, xe, ym, ye, zm, ze;
+	xm = static_cast<int>(round(intersection.x - r0Global)) + offsetVec.x;
+	xe = static_cast<int>(round(intersection.x + r0Global)) + offsetVec.x;
+	ym = static_cast<int>(round(intersection.y - r0Global)) + offsetVec.y;
+	ye = static_cast<int>(round(intersection.y + r0Global)) + offsetVec.y;
+	zm = static_cast<int>(round(intersection.z - r0Global)) + offsetVec.z;
+	ze = static_cast<int>(round(intersection.z + r0Global)) + offsetVec.z;
+
+	for (int i = xm; i <= xe; ++i) {
+		for (int j = ym; j <= ye; ++j) {
+			for (int k = zm; k <= ze; ++k) {
+				std::vector<photon> &currentPhotonsGlobal = globalMap(i, j, k);
+				std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
+				for (photon p : currentPhotonsGlobal)
+				{
+					float dist = glm::distance(intersection, p.startPoint);
+					if (dist < r0Global)
+						radiance += (rho * p.flux) / ((float)PI * r02Global);
+				}
+			}
+		}
+	}
+	return radiance;
+}
+
+float camera::causticEstimate(glm::vec3 intersection, double rho)
+{
+	float r0Caustic = 0.06f;
+	float r02Caustic = r0Caustic * r0Caustic;
+	
+	float radiance = 0.0f;
+
+	int xm, xe, ym, ye, zm, ze;
+	xm = static_cast<int>(round(intersection.x - r0Caustic)) + offsetVec.x;
+	xe = static_cast<int>(round(intersection.x + r0Caustic)) + offsetVec.x;
+	ym = static_cast<int>(round(intersection.y - r0Caustic)) + offsetVec.y;
+	ye = static_cast<int>(round(intersection.y + r0Caustic)) + offsetVec.y;
+	zm = static_cast<int>(round(intersection.z - r0Caustic)) + offsetVec.z;
+	ze = static_cast<int>(round(intersection.z + r0Caustic)) + offsetVec.z;
+
+
+	for (int i = xm; i <= xe; ++i) {
+		for (int j = ym; j <= ye; ++j) {
+			for (int k = zm; k <= ze; ++k) {
+				std::vector<photon> &currentPhotonsCaustic = causticMap(i, j, k);
+				for (photon p : currentPhotonsCaustic)
+				{
+					float dist = glm::distance(intersection, p.startPoint);
+					if (dist < r0Caustic)
+						radiance += (rho * p.flux) / ((float)PI * r02Caustic);
+				}
+			}
+		}
+	}
+	return radiance;
 }
 
 int camera::getAndUpdateCurrentLine()
